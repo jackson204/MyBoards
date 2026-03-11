@@ -4,10 +4,8 @@ namespace MyBoards.Entities;
 
 public class MyBoardsContext : DbContext
 {
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    public MyBoardsContext(DbContextOptions<MyBoardsContext> options) : base(options)
     {
-        optionsBuilder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=MyBoardsDb;Trusted_Connection=True;");
-        base.OnConfiguring(optionsBuilder);
     }
 
     public DbSet<WorkItem> WorkItems { get; set; }
