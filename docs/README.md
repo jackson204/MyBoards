@@ -21,4 +21,4 @@
 
 ### 學習筆記
 
-（尚無）
+- [用 `dotnet new gitignore` 產生 .gitignore](notes/dotnet-cli/dotnet-new-gitignore.md) — #dotnet-cli #git 指令用法、`--force`、已追蹤檔案用 `git rm --cached`
