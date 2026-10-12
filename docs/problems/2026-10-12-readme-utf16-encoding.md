@@ -17,6 +17,7 @@
 - 檔案被存成 **UTF-16 LE（含 BOM `FF FE`）**，每個 ASCII 字元佔 2 bytes，第二個 byte 是 `00`，所以用 UTF-8 讀會變成「字元 + 空白」，開頭的 BOM 顯示成 `��`。
 - 常見來源：Windows PowerShell 5.x 的 `echo "..." > README.md` / `Out-File` 預設輸出 UTF-16 LE。
   PowerShell 7+ 預設已改為 UTF-8（無 BOM）。
+- 有些編輯器 / 工具改寫檔案時會**沿用原本的編碼**，所以只是改內容不會變成 UTF-8，要明確轉換。可用 `file README.md` 或 `head -c 4 README.md | od -tx1` 確認（UTF-8 開頭是 `23 20`，UTF-16 LE 是 `23 00`）。
 - git 會把 UTF-16 檔案當成 binary，`git diff` 看不到內容差異；GitHub 顯示也可能異常。
 
 ## 解決方式
