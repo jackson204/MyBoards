@@ -1,10 +1,11 @@
-# EF Core 連接資料庫（Code First）
+# EF Core 入門：ORM 原理與連接資料庫（Code First）
 
-- 標籤：#ef-core #database #sql-server #migration
-- 最後更新：2026-10-16
+- 標籤：#ef-core #orm #database #sql-server #migration
+- 最後更新：2026-10-17
 
 ## 重點摘要
 
+- ORM（EF Core）負責「物件 ↔ 資料列」「LINQ ↔ SQL」的翻譯，class 是資料的藍圖
 - 流程：**Entity class → DbContext → 註冊 DI + 連線字串 → Migration 建表 → 注入 DbContext 使用**
 - 需要：`Microsoft.EntityFrameworkCore.SqlServer`、`Microsoft.EntityFrameworkCore.Design`（版本對齊 .NET 6 → `6.0.x`）、`dotnet-ef` 工具
 - 每個 Entity 都要有**主鍵**（屬性叫 `Id` 會自動被當主鍵）
@@ -17,6 +18,7 @@
 
 > 本文的圖用 [Mermaid](https://mermaid.js.org/) 撰寫：GitHub 會直接渲染；Rider 需在
 > `Settings → Languages & Frameworks → Markdown` 勾選 **Mermaid** 後，在 Markdown 預覽中顯示。
+> 也可直接用瀏覽器開啟 HTML 版：`docs/html/notes/ef-core/connect-database.html`（執行 `docs/_tools/build-html.ps1` 產生）。
 
 ### 1.1 為什麼要有 class？
 
@@ -67,7 +69,65 @@ var items = await db.WorkItems
 
 > 這種「只有屬性、對應到資料表」的 class 稱為 **Entity**（實體），也常被叫做 POCO（Plain Old CLR Object）——它不需要繼承任何 EF 的類別，就是普通的 class。
 
-### 1.2 class 如何對應到資料表
+### 1.2 為什麼要用 ORM？
+
+**ORM（Object-Relational Mapper，物件關聯對映）** 就是 1.1 提到的「翻譯層」：自動把 **物件 ↔ 資料列**、**LINQ ↔ SQL** 互相轉換。EF Core 是 .NET 官方的 ORM。
+
+#### 沒有 ORM 時，這些事都要自己做
+
+```mermaid
+flowchart LR
+    subgraph NoORM["沒有 ORM（ADO.NET）：全部自己寫"]
+        direction TB
+        N1["手寫 SQL 字串"] --> N2["手動加參數<br/>防 SQL Injection"]
+        N2 --> N3["開關連線、執行"]
+        N3 --> N4["reader 逐欄讀值<br/>轉型、塞進物件"]
+        N4 --> N5["改了哪些欄位？<br/>自己組 UPDATE"]
+        N5 --> N6["自己管交易"]
+        N6 --> N7["建表 / 改表 SQL<br/>自己維護腳本"]
+    end
+    subgraph ORM["有 ORM（EF Core）：只寫這些"]
+        direction TB
+        O1["LINQ 查詢 / 改物件屬性"] --> O2["SaveChangesAsync()"]
+        O2 --> O3["dotnet ef migrations add"]
+    end
+```
+
+| 工作 | 沒有 ORM | EF Core 自動處理 |
+|------|---------|------------------|
+| 寫 SQL | 每個查詢手寫字串 | LINQ 轉譯 |
+| 資料列 → 物件 | `reader["欄位"]` 逐一轉型 | 自動實體化（Materialization） |
+| 防 SQL Injection | 自己記得參數化 | 預設參數化 |
+| 產生 UPDATE | 自己判斷改了哪些欄位 | Change Tracker 比對 |
+| 交易 | 手動 `BeginTransaction` | 一次 `SaveChanges` 就是一個交易 |
+| 資料表結構 | 手寫 DDL、手動同步 | Migration 依 class 產生、有版本紀錄 |
+| 換資料庫 | SQL 方言不同要改寫 | 換 Provider |
+
+#### .NET 常見的三種資料存取方式
+
+| | ADO.NET | Dapper（Micro-ORM） | EF Core（完整 ORM） |
+|---|---|---|---|
+| SQL 誰寫 | 自己 | 自己 | 自動產生（也可自己寫） |
+| 結果 → 物件 | 手動 | 自動 | 自動 |
+| 變更追蹤 / 自動 UPDATE | ✗ | ✗ | ✓ |
+| Migration | ✗ | ✗ | ✓ |
+| 關聯（導覽屬性、Include） | ✗ | 手動 multi-mapping | ✓ |
+| 執行效能 | 最快 | 接近 ADO.NET | 稍慢（多一層轉譯與追蹤） |
+| 開發速度 | 慢 | 中 | 快 |
+| 適合 | 極致效能、底層工具 | 複雜報表、手調 SQL | 一般 CRUD、商業邏輯為主的應用 |
+
+#### ORM 的代價（要知道的坑）
+
+- **效能開銷**：多一層 LINQ 轉譯與 Change Tracking。純讀取可用 `AsNoTracking()` 減少負擔。
+- **產生的 SQL 不一定最佳**：例如 **N+1 問題**——迴圈裡存取導覽屬性，導致每筆各發一次查詢；要用 `Include` 一次載入。
+- **抽象會漏**：還是要懂 SQL，才看得懂 EF 產生了什麼。開發時可在 `appsettings.Development.json` 把 `Microsoft.EntityFrameworkCore.Database.Command` 的 LogLevel 設為 `Information` 來看實際 SQL。
+- **不是全有全無**：EF Core 也能執行自寫 SQL（`FromSqlInterpolated`、`ExecuteSqlInterpolatedAsync`），也可以同一專案混用 Dapper 處理特別的查詢。
+
+#### 本專案為什麼選 EF Core
+
+MyBoards 是以 CRUD 和實體關聯（User / WorkItem / Comment / Tag）為主的 Web API，正好是 ORM 最擅長的情境：用 class 描述模型、Migration 管 schema 版本、LINQ 寫查詢，開發速度與可維護性最好；之後真的遇到效能瓶頸，再針對該查詢改用自寫 SQL 或 Dapper。
+
+### 1.3 class 如何對應到資料表
 
 左邊是 C# class（含導覽屬性），右邊是 Migration 產生出來的資料表：
 
@@ -165,7 +225,7 @@ erDiagram
 - **導覽屬性（`Author`、`Comments`、`Tags`）不會變成欄位**，它們只存在於 C# 端；資料庫裡只看得到外鍵欄位。
 - **多對多**在 C# 是兩邊各放一個 `List`，在資料庫則多出一張中間表 `TagWorkItem`（EF Core 自動建立）。
 
-### 1.3 整體架構：誰負責什麼
+### 1.4 整體架構：誰負責什麼
 
 ```mermaid
 flowchart TB
@@ -190,7 +250,7 @@ flowchart TB
     DB -- "rows" --> PROV
 ```
 
-### 1.4 一次查詢在背後發生什麼（時序圖）
+### 1.5 一次查詢在背後發生什麼（時序圖）
 
 以 `GET /workitems` 查詢 Priority > 1 的 WorkItem 為例：
 
@@ -220,7 +280,7 @@ sequenceDiagram
 
 > `Where(...)` 本身不會查資料庫，只是在組裝查詢；直到 `ToListAsync()`、`FirstAsync()` 等「取值」方法才真的送出 SQL（**延遲執行 Deferred Execution**）。
 
-### 1.5 一次寫入在背後發生什麼（時序圖）
+### 1.6 一次寫入在背後發生什麼（時序圖）
 
 DbContext 會「記住」你對物件做了什麼（Change Tracking），`SaveChanges` 時才一次寫入：
 
@@ -259,7 +319,7 @@ Entity 在 Change Tracker 中的狀態：
 | `Deleted` | `Remove()` | `DELETE` |
 | `Detached` | 不受追蹤 | 不做事 |
 
-### 1.6 Code First 開發流程（流程圖）
+### 1.7 Code First 開發流程（流程圖）
 
 ```mermaid
 flowchart LR
@@ -273,7 +333,7 @@ flowchart LR
     H -. "下一次需求變更" .-> A
 ```
 
-### 1.7 名詞對照
+### 1.8 名詞對照
 
 | 觀念 | 角色 | 對應資料庫 |
 |------|------|-----------|

@@ -11,6 +11,7 @@
 
 - 問題紀錄中有通用價值的知識，整理到 `notes/` 並互相連結。
 - 新增筆記後，在下方索引加一行：`- [標題](路徑) — #tag 一句話摘要`
+- HTML 版（含圖表、目錄）：執行 `docs/_tools/build-html.ps1` 產生到 `docs/html/`，用瀏覽器開 `docs/html/README.html`（需網路載入 CDN）
 - 查找：錯誤訊息原文或標籤，用 Rider「Find in Files」或 `git grep "<關鍵字>" -- docs/`
 
 ## 索引
@@ -22,4 +23,4 @@
 ### 學習筆記
 
 - [用 `dotnet new gitignore` 產生 .gitignore](notes/dotnet-cli/dotnet-new-gitignore.md) — #dotnet-cli #git 指令用法、`--force`、已追蹤檔案用 `git rm --cached`
-- [EF Core 連接資料庫（Code First）](notes/ef-core/connect-database.md) — #ef-core #migration 為何需要 class、架構與時序圖、套件、主鍵與關聯、DbContext、Migration、常見錯誤
+- [EF Core 入門：ORM 原理與連接資料庫（Code First）](notes/ef-core/connect-database.md) — #ef-core #orm 為何需要 class 與 ORM、架構與時序圖、套件、主鍵與關聯、DbContext、Migration、常見錯誤
