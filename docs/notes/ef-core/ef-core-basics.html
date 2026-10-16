@@ -662,7 +662,7 @@ sequenceDiagram
     participant C as Client
     participant API as API Endpoint
     participant DI as DI Container
-    participant Ctx as BloggingContext
+    participant Ctx as DbContext
     participant EF as EF Core + Provider
     participant DB as SQL Server
 
@@ -677,7 +677,7 @@ sequenceDiagram
     EF->>EF: rows 轉成 Blog 物件，登記到 Change Tracker
     EF-->>API: List#lt;Blog#gt;
     API-->>C: 200 OK（JSON）
-    Note over DI,Ctx: request 結束，DbContext 被 Dispose，連線歸還連線池
+    Note over API,EF: request 結束，DbContext 被 Dispose，連線歸還連線池
     </script></div>
     <figcaption>圖 7-1　查詢時序圖</figcaption>
   </figure>
@@ -697,7 +697,7 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant API as 你的程式
-    participant Ctx as BloggingContext
+    participant Ctx as DbContext
     participant CT as Change Tracker
     participant DB as SQL Server
 
@@ -738,14 +738,15 @@ sequenceDiagram
 
   <figure>
     <div class="diagram"><script type="text/x-mermaid">
-flowchart LR
-    A["撰寫 / 修改<br/>Entity class"] --> B["在 OnModelCreating<br/>設定規則與關聯"]
-    B --> C["dotnet ef migrations add 名稱"]
-    C --> D{"Up() / Down()<br/>符合預期？"}
-    D -- "否" --> E["dotnet ef migrations remove"] --> A
-    D -- "是" --> F["dotnet ef database update"]
+flowchart TB
+    A["① 撰寫 / 修改 Entity class"] --> B["② 在 OnModelCreating 設定規則與關聯"]
+    B --> C["③ dotnet ef migrations add 名稱"]
+    C --> D{"④ 檢查 Up() / Down()<br/>符合預期？"}
+    D -- "否" --> E["dotnet ef migrations remove<br/>回到 ①"]
+    E -.-> A
+    D -- "是" --> F["⑤ dotnet ef database update"]
     F --> G[("資料庫結構更新<br/>__EFMigrationsHistory 多一筆")]
-    G --> H["commit：Entity + Migrations"]
+    G --> H["⑥ commit：Entity + Migrations"]
     H -. "下一次需求變更" .-> A
     </script></div>
     <figcaption>圖 9-1　Code First 開發循環</figcaption>
@@ -1127,7 +1128,7 @@ sequenceDiagram
     autonumber
     participant C as Client
     participant API as POST /blogs/1/posts
-    participant Ctx as BloggingContext
+    participant Ctx as DbContext
     participant DB as SQL Server
 
     C->>API: { title, content, tags: ["efcore", "new-tag"] }
@@ -1325,7 +1326,7 @@ sequenceDiagram
     return pre;
   });
   const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default' });
+  mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', themeVariables: { fontSize: '16px' }, flowchart: { nodeSpacing: 40, rankSpacing: 45 }, sequence: { wrap: true, width: 120, actorMargin: 20, messageFontSize: 15, noteFontSize: 14, actorFontSize: 15 } });
   await mermaid.run({ nodes });
 })();
 </script>
