@@ -24,4 +24,4 @@
 ### 學習筆記
 
 - [用 `dotnet new gitignore` 產生 .gitignore](notes/dotnet-cli/dotnet-new-gitignore.md) — #dotnet-cli #git 指令用法、`--force`、已追蹤檔案用 `git rm --cached`
-- [EF Core 入門：ORM 原理與連接資料庫](notes/ef-core/ef-core-basics.md)（[圖解 HTML](notes/ef-core/ef-core-basics.html)）— #ef-core #orm 為何需要 class 與 ORM、查詢 / 寫入原理、從零連接 SQL Server、Fluent API、Migration、常見錯誤
+- [EF Core 入門：ORM 原理與連接資料庫](notes/ef-core/ef-core-basics.md)（[圖解 HTML](notes/ef-core/ef-core-basics.html)）— #ef-core #orm 為何需要 class 與 ORM、查詢 / 寫入原理、情境演練（需求 → 分析 → 實作 → 驗收）、Fluent API、Migration、常見錯誤

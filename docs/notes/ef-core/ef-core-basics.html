@@ -131,6 +131,17 @@
   ol.steps > li:last-child::after { display: none; }
   ol.steps > li > h3 { margin: 4px 0 8px; }
 
+  .req { margin: 18px 0 8px; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 12px; background: var(--bg-card); box-shadow: var(--shadow); overflow: hidden; }
+  .req-head { padding: 10px 18px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 14.5px; }
+  .req-story { margin: 14px 18px 4px; color: var(--fg-muted); }
+  .req-list { list-style: none; margin: 8px 0 14px; padding: 0 18px; }
+  .req-list li { padding: 7px 0; border-top: 1px dashed var(--border); }
+  .req-list li:first-child { border-top: 0; }
+  .rid { display: inline-block; min-width: 30px; margin-right: 8px; padding: 0 7px; border-radius: 6px; font: 700 12.5px "Cascadia Code", Consolas, monospace; text-align: center; background: var(--accent); color: #fff; }
+  @media (prefers-color-scheme: dark) { .rid { color: #0d1117; } }
+  .pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 13px; background: var(--bg-soft); border: 1px solid var(--border); color: var(--fg-muted); }
+  .pill.ent { background: var(--tip-soft); border-color: var(--tip); color: var(--tip); font-weight: 600; }
+
   footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--fg-muted); }
 
   @media (max-width: 900px) {
@@ -156,9 +167,15 @@
     <li><a href="#save">寫入的背後</a></li>
     <li><a href="#workflow">Code First 開發流程</a></li>
   </ol>
-  <div class="label">實作</div>
+  <div class="label">情境演練</div>
   <ol>
-    <li><a href="#tutorial">從零連接資料庫</a></li>
+    <li><a href="#scenario">情境：一份需求</a></li>
+    <li><a href="#analysis">需求分析</a></li>
+    <li><a href="#tutorial">實作</a></li>
+    <li><a href="#acceptance">驗收</a></li>
+  </ol>
+  <div class="label">速查</div>
+  <ol>
     <li><a href="#config">設定規則：慣例與 Fluent API</a></li>
     <li><a href="#migration-cmd">Migration 指令</a></li>
     <li><a href="#errors">常見錯誤</a></li>
@@ -170,7 +187,7 @@
 <header class="hero">
   <div class="eyebrow">EF CORE · ORM · CODE FIRST</div>
   <h1>EF Core 入門：ORM 原理與連接資料庫</h1>
-  <p>從「為什麼需要 class 與 ORM」講起，搭配圖解，最後一步步用 ASP.NET Core 連上 SQL Server。範例沿用微軟官方教學的 <code>Blog</code> / <code>Post</code> 模型。</p>
+  <p>從「為什麼需要 class 與 ORM」講起，搭配圖解，再用一份部落格平台的需求，走一次「分析 → 實作 → 驗收」。範例沿用微軟官方教學的 <code>Blog</code> / <code>Post</code> 模型。</p>
   <div class="chips">
     <span class="chip">.NET 6</span><span class="chip">EF Core 6</span><span class="chip">SQL Server</span><span class="chip">Minimal API</span><span class="chip">最後更新 2026-10-17</span>
   </div>
@@ -372,6 +389,7 @@ classDiagram
         int PostId
         string Title
         string Content
+        DateTime PublishedOn
         int BlogId
         Blog Blog
         List~Tag~ Tags
@@ -401,6 +419,7 @@ erDiagram
         int PostId PK
         nvarchar Title
         nvarchar Content
+        datetime2 PublishedOn
         int BlogId FK
     }
     Tags {
@@ -531,9 +550,128 @@ flowchart LR
 
 <!-- ============================== 實作 ============================== -->
 
+<section id="scenario">
+  <h2><span class="num">8</span>情境：一份需求</h2>
+  <p class="lead">前面都是原理。接下來用一個實際需求走一次完整流程：<b>讀需求 → 分析 → 實作 → 驗收</b>。</p>
+
+  <div class="req">
+    <div class="req-head">需求單 · 小型部落格平台 API</div>
+    <p class="req-story">我們要做一個部落格平台的後端。使用者可以開自己的部落格、發文章，文章可以加標籤，讀者可以依標籤找文章。</p>
+    <ol class="req-list">
+      <li><span class="rid">R1</span>使用者可以建立部落格，部落格要有<b>網址</b>，<b>網址不可重複</b>。</li>
+      <li><span class="rid">R2</span>每個部落格可以發表<b>多篇文章</b>。文章有<b>標題（必填，最多 200 字）</b>、<b>內容</b>、<b>發布時間</b>（沒給就用現在時間）。</li>
+      <li><span class="rid">R3</span>文章可以加上<b>多個標籤</b>，同一個標籤可以用在多篇文章，<b>標籤名稱不可重複</b>。</li>
+      <li><span class="rid">R4</span>刪除部落格時，底下的文章<b>一併刪除</b>。</li>
+      <li><span class="rid">R5</span>需要的 API：查某部落格的文章列表（<b>新到舊</b>）、<b>依標籤查文章</b>、<b>新增文章時可同時給標籤</b>（標籤不存在就建立）。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="analysis">
+  <h2><span class="num">9</span>需求分析：從文字到模型</h2>
+  <p class="lead">不要急著寫程式。先把需求拆成四個問題，每個問題的答案剛好對應到 EF Core 的一塊。</p>
+
+  <figure>
+    <div class="diagram"><script type="text/x-mermaid">
+flowchart LR
+    R(["需求文字"]) --> A["① 找名詞<br/>有哪些東西？<br/>───<br/>Entity class"]
+    A --> B["② 找關係<br/>幾對幾？<br/>───<br/>導覽屬性 + 外鍵"]
+    B --> C["③ 找規則<br/>必填、長度、唯一、刪除<br/>───<br/>Fluent API 設定"]
+    C --> D["④ 找操作<br/>要查什麼、寫什麼？<br/>───<br/>API Endpoint + LINQ"]
+    </script></div>
+    <figcaption>圖 9-1　需求分析的四個問題，以及各自對應的實作</figcaption>
+  </figure>
+
+  <h3>① 找名詞：哪些是 Entity，哪些只是屬性？</h3>
+  <p>把需求裡的名詞圈出來。判斷原則：<b>它自己有沒有身分（需要被單獨查詢、被多個東西引用）？</b>有的話就是 Entity，沒有的話只是某個 Entity 的屬性。</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>名詞</th><th>判斷</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td>部落格</td><td><span class="pill ent">Entity：Blog</span></td><td>可以被建立、刪除，底下掛著文章</td></tr>
+      <tr><td>文章</td><td><span class="pill ent">Entity：Post</span></td><td>可以被列出、新增，有自己的標籤</td></tr>
+      <tr><td>標籤</td><td><span class="pill ent">Entity：Tag</span></td><td>R3「同一個標籤用在多篇文章」→ 被多個東西共用，要有自己的身分；R5 要依標籤查詢</td></tr>
+      <tr><td>網址</td><td><span class="pill">屬性：Blog.Url</span></td><td>描述部落格，不會單獨存在</td></tr>
+      <tr><td>標題、內容、發布時間</td><td><span class="pill">屬性：Post.Title / Content / PublishedOn</span></td><td>描述文章</td></tr>
+      <tr><td>標籤名稱</td><td><span class="pill">屬性：Tag.Name</span></td><td>描述標籤</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout">
+    <strong>常見的猶豫：標籤可以只是一個字串欄位嗎？</strong>
+    <p>如果寫成 <code>Post.Tags = "csharp,efcore"</code>，就無法保證 R3「名稱不可重複」，R5「依標籤查詢」也只能用 <code>LIKE</code> 模糊比對，又慢又不準。只要需求裡出現「共用」或「依它查詢」，通常就該獨立成 Entity。</p>
+  </div>
+
+  <h3>② 找關係：幾對幾？</h3>
+  <p>對每一對 Entity 問兩次「一個 A 有幾個 B？一個 B 有幾個 A？」</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>關係</th><th>A → B</th><th>B → A</th><th>結論</th><th>實作方式</th></tr></thead>
+    <tbody>
+      <tr><td>Blog ↔ Post</td><td>一個部落格有<b>多篇</b>文章（R2）</td><td>一篇文章屬於<b>一個</b>部落格</td><td><b>一對多</b></td><td>Post 放外鍵 <code>BlogId</code>；Blog 放 <code>List&lt;Post&gt;</code></td></tr>
+      <tr><td>Post ↔ Tag</td><td>一篇文章有<b>多個</b>標籤（R3）</td><td>一個標籤用在<b>多篇</b>文章（R3）</td><td><b>多對多</b></td><td>兩邊各放 <code>List</code>，EF 自動建中間表</td></tr>
+      <tr><td>Blog ↔ Tag</td><td colspan="3">沒有直接關係（透過文章間接相關）</td><td>不用設定</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="diagram"><script type="text/x-mermaid">
+erDiagram
+    Blog ||--o{ Post : "R2 一對多"
+    Post }o--o{ Tag : "R3 多對多"
+    Blog {
+        int BlogId PK
+        string Url "R1 唯一"
+    }
+    Post {
+        int PostId PK
+        string Title "R2 必填 200"
+        string Content
+        datetime PublishedOn "R2 預設現在"
+        int BlogId FK "R4 串聯刪除"
+    }
+    Tag {
+        int TagId PK
+        string Name "R3 唯一"
+    }
+    </script></div>
+    <figcaption>圖 9-2　分析結果：概念模型（標註來自哪條需求）</figcaption>
+  </figure>
+
+  <h3>③ 找規則：每條限制對應哪個設定？</h3>
+  <p>把需求中的「必填、最多、不可重複、一併刪除、預設」這類字眼挑出來，逐條翻成 EF Core 設定。</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>需求</th><th>規則</th><th>EF Core 設定</th><th>資料庫結果</th></tr></thead>
+    <tbody>
+      <tr><td><span class="rid">R1</span></td><td>網址必填、不可重複</td><td><code>IsRequired()</code> + <code>HasIndex(b =&gt; b.Url).IsUnique()</code></td><td>NOT NULL + UNIQUE INDEX</td></tr>
+      <tr><td><span class="rid">R2</span></td><td>標題必填、最多 200 字</td><td><code>IsRequired().HasMaxLength(200)</code></td><td><code>nvarchar(200) NOT NULL</code></td></tr>
+      <tr><td><span class="rid">R2</span></td><td>發布時間預設現在</td><td><code>HasDefaultValueSql("getutcdate()")</code></td><td><code>DEFAULT getutcdate()</code></td></tr>
+      <tr><td><span class="rid">R3</span></td><td>標籤名稱不可重複</td><td><code>HasIndex(t =&gt; t.Name).IsUnique()</code></td><td>UNIQUE INDEX</td></tr>
+      <tr><td><span class="rid">R4</span></td><td>刪部落格一併刪文章</td><td><code>OnDelete(DeleteBehavior.Cascade)</code>（必填外鍵的預設值，寫出來讓意圖清楚）</td><td><code>ON DELETE CASCADE</code></td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout tip">
+    <strong>為什麼「不可重複」要交給資料庫？</strong>
+    <p>程式先查再新增（<code>AnyAsync</code> 後 <code>Add</code>）時，兩個請求同時進來還是可能都通過檢查。唯一索引才是最後一道保證。程式端的檢查是為了回傳友善的錯誤訊息。</p>
+  </div>
+
+  <h3>④ 找操作：要查什麼、寫什麼？</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>需求</th><th>API</th><th>查詢重點</th></tr></thead>
+    <tbody>
+      <tr><td><span class="rid">R1</span></td><td><code>POST /blogs</code></td><td>先檢查網址是否存在 → 回 409 Conflict</td></tr>
+      <tr><td><span class="rid">R4</span></td><td><code>DELETE /blogs/{id}</code></td><td><code>Remove</code> 部落格，文章由資料庫串聯刪除</td></tr>
+      <tr><td><span class="rid">R5</span></td><td><code>GET /blogs/{id}/posts</code></td><td><code>Where(BlogId)</code> + <code>OrderByDescending(PublishedOn)</code>，用 <code>Select</code> 只取需要的欄位</td></tr>
+      <tr><td><span class="rid">R5</span></td><td><code>GET /tags/{name}/posts</code></td><td>多對多查詢：<code>Where(p =&gt; p.Tags.Any(t =&gt; t.Name == name))</code></td></tr>
+      <tr><td><span class="rid">R5</span></td><td><code>POST /blogs/{id}/posts</code></td><td>找出已存在的標籤 + 建立新標籤，一次 <code>SaveChanges</code> 寫入</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout warn">
+    <strong>API 不要直接回傳 Entity</strong>
+    <p><code>Blog.Posts</code> → <code>Post.Blog</code> → <code>Blog.Posts</code>… 導覽屬性會互相指來指去，序列化成 JSON 時會丟出 <code>A possible object cycle was detected</code>。用 <code>Select</code> 投影成匿名物件或 DTO：只回需要的欄位，SQL 也只查那些欄位。</p>
+  </div>
+</section>
+
 <section id="tutorial">
-  <h2><span class="num">8</span>從零連接資料庫</h2>
-  <p class="lead">以 .NET 6 Minimal API + SQL Server LocalDB 為例，跟著做一次。</p>
+  <h2><span class="num">10</span>實作：從零連接資料庫</h2>
+  <p class="lead">依分析結果動手，環境為 .NET 6 Minimal API + SQL Server LocalDB。程式中的 <code>// R1</code> 等註解標示對應的需求。</p>
 
   <ol class="steps">
     <li>
@@ -563,46 +701,47 @@ dotnet ef --version</code></pre>
         <tbody>
           <tr><td><strong>SQL Server LocalDB</strong></td><td>Windows 本機開發，免設定</td><td><code>Server=(localdb)\mssqllocaldb;Database=Blogging;Trusted_Connection=True;</code></td></tr>
           <tr><td>SQL Server（Docker）</td><td>跨平台、接近正式環境</td><td><code>Server=localhost,1433;Database=Blogging;User Id=sa;Password=…;TrustServerCertificate=True;</code></td></tr>
-          <tr><td>SQLite</td><td>最輕量，一個檔案</td><td><code>Data Source=blogging.db</code>（套件改用 <code>…Sqlite</code>，呼叫 <code>UseSqlite</code>）</td></tr>
+          <tr><td>SQLite</td><td>最輕量，一個檔案</td><td><code>Data Source=blogging.db</code>（套件改用 <code>…Sqlite</code>，呼叫 <code>UseSqlite</code>；<code>getutcdate()</code> 要改成 SQLite 的寫法）</td></tr>
         </tbody>
       </table></div>
       <p>確認 LocalDB：執行 <code>sqllocaldb info</code> 應看到 <code>MSSQLLocalDB</code>。</p>
     </li>
 
     <li>
-      <h3>撰寫 Entity</h3>
+      <h3>撰寫 Entity（分析 ① ②）</h3>
       <span class="file">Models/Blog.cs</span>
 <pre><code class="language-csharp">public class Blog
 {
     public int BlogId { get; set; }                     // 主鍵（慣例：&lt;類別名&gt;Id）
-    public string Url { get; set; }
+    public string Url { get; set; }                     // R1
 
-    public List&lt;Post&gt; Posts { get; set; } = new();      // 一對多：一個 Blog 有多篇 Post
+    public List&lt;Post&gt; Posts { get; set; } = new();      // R2 一對多
 }</code></pre>
       <span class="file">Models/Post.cs</span>
 <pre><code class="language-csharp">public class Post
 {
     public int PostId { get; set; }
-    public string Title { get; set; }
+    public string Title { get; set; }                   // R2
     public string Content { get; set; }
+    public DateTime PublishedOn { get; set; }           // R2
 
     public int BlogId { get; set; }                     // 外鍵
     public Blog Blog { get; set; }                      // 導覽屬性
 
-    public List&lt;Tag&gt; Tags { get; set; } = new();        // 多對多
+    public List&lt;Tag&gt; Tags { get; set; } = new();        // R3 多對多
 }</code></pre>
       <span class="file">Models/Tag.cs</span>
 <pre><code class="language-csharp">public class Tag
 {
     public int TagId { get; set; }
-    public string Name { get; set; }
+    public string Name { get; set; }                    // R3
 
-    public List&lt;Post&gt; Posts { get; set; } = new();      // 多對多的另一端
+    public List&lt;Post&gt; Posts { get; set; } = new();      // R3 多對多的另一端
 }</code></pre>
     </li>
 
     <li>
-      <h3>建立 DbContext</h3>
+      <h3>建立 DbContext（分析 ③）</h3>
       <span class="file">Data/BloggingContext.cs</span>
 <pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;
 
@@ -620,17 +759,29 @@ public class BloggingContext : DbContext
     {
         modelBuilder.Entity&lt;Blog&gt;(eb =&gt;
         {
-            eb.Property(b =&gt; b.Url).IsRequired().HasMaxLength(500);
+            eb.Property(b =&gt; b.Url).IsRequired().HasMaxLength(500);   // R1 必填
+            eb.HasIndex(b =&gt; b.Url).IsUnique();                       // R1 不可重複
 
-            eb.HasMany(b =&gt; b.Posts)
+            eb.HasMany(b =&gt; b.Posts)                                  // R2 一對多
               .WithOne(p =&gt; p.Blog)
-              .HasForeignKey(p =&gt; p.BlogId);
+              .HasForeignKey(p =&gt; p.BlogId)
+              .OnDelete(DeleteBehavior.Cascade);                      // R4 一併刪除
         });
 
         modelBuilder.Entity&lt;Post&gt;(eb =&gt;
         {
-            eb.Property(p =&gt; p.Title).IsRequired().HasMaxLength(200);
-            eb.HasMany(p =&gt; p.Tags).WithMany(t =&gt; t.Posts);
+            eb.Property(p =&gt; p.Title).IsRequired().HasMaxLength(200); // R2 必填、200 字
+            eb.Property(p =&gt; p.PublishedOn)
+              .HasDefaultValueSql("getutcdate()");                    // R2 預設現在
+            eb.HasIndex(p =&gt; p.PublishedOn);                          // R5 依時間排序常用
+
+            eb.HasMany(p =&gt; p.Tags).WithMany(t =&gt; t.Posts);           // R3 多對多
+        });
+
+        modelBuilder.Entity&lt;Tag&gt;(eb =&gt;
+        {
+            eb.Property(t =&gt; t.Name).IsRequired().HasMaxLength(50);
+            eb.HasIndex(t =&gt; t.Name).IsUnique();                      // R3 不可重複
         });
     }
 }</code></pre>
@@ -680,33 +831,148 @@ dotnet ef database update</code></pre>
           <tr><td><code>BloggingContextModelSnapshot.cs</code></td><td>目前模型的完整快照，下次新增 Migration 時拿來比對</td></tr>
         </tbody>
       </table></div>
-      <p>Migration 檔要 commit 進版本控制，它就是資料庫結構的歷史紀錄。</p>
+      <p>打開 <code>InitialCreate.cs</code> 的 <code>Up()</code>，可以對照分析 ③：應該看得到 <code>maxLength: 200</code>、<code>defaultValueSql: "getutcdate()"</code>、<code>onDelete: ReferentialAction.Cascade</code>、<code>unique: true</code>。Migration 檔要 commit 進版本控制。</p>
     </li>
 
     <li>
-      <h3>在 API 中使用</h3>
-<pre><code class="language-csharp">app.MapGet("/blogs", async (BloggingContext db) =&gt;
-    await db.Blogs
-        .AsNoTracking()                 // 只讀取，不需要變更追蹤
-        .Include(b =&gt; b.Posts)          // 一起載入關聯，避免 N+1
+      <h3>實作 API（分析 ④）</h3>
+      <span class="file">Program.cs（接在 <code>var app = builder.Build();</code> 之後）</span>
+<pre><code class="language-csharp">// R1 建立部落格，網址不可重複
+app.MapPost("/blogs", async (BloggingContext db, CreateBlogRequest req) =&gt;
+{
+    if (await db.Blogs.AnyAsync(b =&gt; b.Url == req.Url))
+        return Results.Conflict($"網址 {req.Url} 已被使用");
+
+    var blog = new Blog { Url = req.Url };
+    db.Blogs.Add(blog);                                // 標記為 Added
+    await db.SaveChangesAsync();                       // 送出 INSERT，取回 BlogId
+    return Results.Created($"/blogs/{blog.BlogId}", new { blog.BlogId, blog.Url });
+});
+
+// R4 刪除部落格，文章由資料庫 ON DELETE CASCADE 一併刪除
+app.MapDelete("/blogs/{blogId:int}", async (int blogId, BloggingContext db) =&gt;
+{
+    var blog = await db.Blogs.FindAsync(blogId);
+    if (blog is null) return Results.NotFound();
+
+    db.Blogs.Remove(blog);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
+// R5 某部落格的文章，新到舊
+app.MapGet("/blogs/{blogId:int}/posts", async (int blogId, BloggingContext db) =&gt;
+    await db.Posts
+        .AsNoTracking()                                // 只讀，不需追蹤
+        .Where(p =&gt; p.BlogId == blogId)
+        .OrderByDescending(p =&gt; p.PublishedOn)
+        .Select(p =&gt; new                               // 投影：只取需要的欄位，避免循環參考
+        {
+            p.PostId,
+            p.Title,
+            p.PublishedOn,
+            Tags = p.Tags.Select(t =&gt; t.Name)          // 在 Select 中讀導覽屬性，不需 Include
+        })
         .ToListAsync());
 
-app.MapPost("/blogs", async (BloggingContext db, Blog blog) =&gt;
+// R5 依標籤查文章（多對多）
+app.MapGet("/tags/{name}/posts", async (string name, BloggingContext db) =&gt;
+    await db.Posts
+        .AsNoTracking()
+        .Where(p =&gt; p.Tags.Any(t =&gt; t.Name == name))
+        .OrderByDescending(p =&gt; p.PublishedOn)
+        .Select(p =&gt; new { p.PostId, p.Title, BlogUrl = p.Blog.Url })
+        .ToListAsync());
+
+// R2 + R3 + R5 新增文章，同時給標籤（不存在就建立）
+app.MapPost("/blogs/{blogId:int}/posts", async (int blogId, CreatePostRequest req, BloggingContext db) =&gt;
 {
-    db.Blogs.Add(blog);                 // 只是標記為 Added
-    await db.SaveChangesAsync();        // 這時才送出 INSERT
-    return Results.Created($"/blogs/{blog.BlogId}", blog);
-});</code></pre>
+    if (!await db.Blogs.AnyAsync(b =&gt; b.BlogId == blogId))
+        return Results.NotFound();
+
+    var names = req.Tags.Distinct().ToList();
+    var existingTags = await db.Tags
+        .Where(t =&gt; names.Contains(t.Name))            // 轉成 SQL 的 IN (...)
+        .ToListAsync();
+    var newTags = names
+        .Except(existingTags.Select(t =&gt; t.Name))
+        .Select(n =&gt; new Tag { Name = n });
+
+    var post = new Post { BlogId = blogId, Title = req.Title, Content = req.Content };
+    post.Tags.AddRange(existingTags);                  // 已存在：只建立關聯
+    post.Tags.AddRange(newTags);                       // 不存在：INSERT Tag + 關聯
+
+    db.Posts.Add(post);
+    await db.SaveChangesAsync();                       // 同一個交易寫入 Posts、Tags、PostTag
+    return Results.Created($"/posts/{post.PostId}", new { post.PostId });
+});
+
+app.Run();
+
+record CreateBlogRequest(string Url);
+record CreatePostRequest(string Title, string Content, List&lt;string&gt; Tags);</code></pre>
+      <figure>
+        <div class="diagram"><script type="text/x-mermaid">
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant API as POST /blogs/1/posts
+    participant Ctx as BloggingContext
+    participant DB as SQL Server
+
+    C->>API: { title, content, tags: ["efcore", "new-tag"] }
+    API->>DB: SELECT ... FROM Blogs WHERE BlogId = 1（存在？）
+    API->>DB: SELECT ... FROM Tags WHERE Name IN ('efcore', 'new-tag')
+    DB-->>API: 只有 efcore 已存在
+    API->>Ctx: post.Tags 加入 efcore（Unchanged）與 new-tag（Added）
+    API->>Ctx: SaveChangesAsync()
+    Ctx->>DB: BEGIN TRANSACTION
+    Ctx->>DB: INSERT Posts（PublishedOn 用預設值）
+    Ctx->>DB: INSERT Tags ('new-tag')
+    Ctx->>DB: INSERT PostTag × 2
+    Ctx->>DB: COMMIT
+    API-->>C: 201 Created
+        </script></div>
+        <figcaption>圖 10-1　新增文章時的資料庫互動</figcaption>
+      </figure>
       <div class="callout tip">
         <strong>看 EF 實際送出的 SQL</strong>
-        <p>在 <code>appsettings.Development.json</code> 的 <code>Logging:LogLevel</code> 加上 <code>"Microsoft.EntityFrameworkCore.Database.Command": "Information"</code>。</p>
+        <p>在 <code>appsettings.Development.json</code> 的 <code>Logging:LogLevel</code> 加上 <code>"Microsoft.EntityFrameworkCore.Database.Command": "Information"</code>，就能在主控台對照上面的時序圖。</p>
       </div>
     </li>
   </ol>
 </section>
 
+<section id="acceptance">
+  <h2><span class="num">11</span>驗收：逐條對照需求</h2>
+  <p class="lead">開 Swagger 實際打 API，每條需求都要能指出「在哪裡實作」和「怎麼證明」。</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>需求</th><th>實作位置</th><th>驗證方式</th><th>預期結果</th></tr></thead>
+    <tbody>
+      <tr><td><span class="rid">R1</span></td><td>唯一索引 + <code>POST /blogs</code> 檢查</td><td>同一個網址建立兩次</td><td>第二次回 <code>409 Conflict</code></td></tr>
+      <tr><td><span class="rid">R2</span></td><td><code>Title</code> 的 <code>IsRequired().HasMaxLength(200)</code>、<code>PublishedOn</code> 預設值</td><td>新增文章不給發布時間；標題給 201 字</td><td>發布時間自動填入；超長標題寫入失敗</td></tr>
+      <tr><td><span class="rid">R3</span></td><td>多對多 + <code>Tag.Name</code> 唯一索引</td><td>兩篇文章都用標籤 <code>efcore</code></td><td><code>Tags</code> 只有一筆 <code>efcore</code>，<code>PostTag</code> 有兩筆</td></tr>
+      <tr><td><span class="rid">R4</span></td><td><code>OnDelete(Cascade)</code></td><td>刪除有文章的部落格</td><td>該部落格的文章也消失，<code>PostTag</code> 對應列一併刪除</td></tr>
+      <tr><td><span class="rid">R5</span></td><td>三個 Endpoint</td><td>依序呼叫</td><td>列表新到舊；依標籤查得到；新標籤自動建立</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout warn">
+    <strong>R2 的長度驗證只靠資料庫還不夠</strong>
+    <p>標題超過 200 字時，SQL Server 會拒絕寫入，EF 丟出 <code>DbUpdateException</code>，API 會回 500。正式專案要在進資料庫前先驗證輸入，例如檢查 <code>req.Title.Length</code> 或使用 FluentValidation，然後回 <code>400 Bad Request</code>。資料庫的限制是最後一道防線。</p>
+  </div>
+
+  <h3>需求變更時怎麼辦？</h3>
+  <p>假設之後新增需求「<b>R6：文章要記錄瀏覽次數</b>」，就照第 7 節的循環走一次：</p>
+  <ol>
+    <li>分析：瀏覽次數是 Post 的屬性，不是新的 Entity → 加 <code>public int ViewCount { get; set; }</code></li>
+    <li>規則：預設 0 → <code>HasDefaultValue(0)</code></li>
+    <li><code>dotnet ef migrations add AddPostViewCount</code> → 檢查 <code>Up()</code> 只有 <code>AddColumn</code></li>
+    <li><code>dotnet ef database update</code>，舊資料自動補上 0</li>
+  </ol>
+</section>
+
 <section id="config">
-  <h2><span class="num">9</span>設定規則：慣例與 Fluent API</h2>
+  <h2><span class="num">12</span>設定規則：慣例與 Fluent API</h2>
   <p class="lead">EF Core 先套用「慣例（Convention）」，再用 Data Annotations 或 Fluent API 覆寫。</p>
 
   <h3>常見慣例</h3>
@@ -762,7 +1028,7 @@ app.MapPost("/blogs", async (BloggingContext db, Blog blog) =&gt;
 </section>
 
 <section id="migration-cmd">
-  <h2><span class="num">10</span>Migration 指令速查</h2>
+  <h2><span class="num">13</span>Migration 指令速查</h2>
   <div class="table-wrap"><table>
     <thead><tr><th>指令</th><th>用途</th></tr></thead>
     <tbody>
@@ -783,23 +1049,25 @@ app.MapPost("/blogs", async (BloggingContext db, Blog blog) =&gt;
 </section>
 
 <section id="errors">
-  <h2><span class="num">11</span>常見錯誤</h2>
+  <h2><span class="num">14</span>常見錯誤</h2>
   <div class="table-wrap"><table>
     <thead><tr><th>錯誤訊息</th><th>原因</th><th>解法</th></tr></thead>
     <tbody>
       <tr><td><code>The entity type 'X' requires a primary key to be defined</code></td><td>Entity 沒有主鍵</td><td>加上 <code>Id</code> 屬性，或用 <code>HasKey</code> 指定</td></tr>
       <tr><td><code>No store type was specified for the decimal property</code></td><td>decimal 沒有指定精度（警告）</td><td><code>HasPrecision(18, 2)</code></td></tr>
-      <tr><td><code>dotnet-ef does not exist</code> / <code>command or file was not found</code></td><td>沒裝 <code>dotnet-ef</code></td><td>回到步驟 2</td></tr>
-      <tr><td><code>Your startup project doesn't reference Microsoft.EntityFrameworkCore.Design</code></td><td>缺少 Design 套件</td><td>回到步驟 1</td></tr>
+      <tr><td><code>dotnet-ef does not exist</code> / <code>command or file was not found</code></td><td>沒裝 <code>dotnet-ef</code></td><td>第 10 節步驟 2</td></tr>
+      <tr><td><code>Your startup project doesn't reference Microsoft.EntityFrameworkCore.Design</code></td><td>缺少 Design 套件</td><td>第 10 節步驟 1</td></tr>
       <tr><td><code>The Entity Framework tools version 'X' is older than that of the runtime 'Y'</code></td><td>工具與套件版本不一致</td><td><code>dotnet tool update --global dotnet-ef --version 6.*</code></td></tr>
       <tr><td><code>A network-related or instance-specific error occurred…</code></td><td>連不到資料庫</td><td>確認 <code>sqllocaldb info</code>、連線字串、JSON 中的 <code>\\</code></td></tr>
+      <tr><td><code>A possible object cycle was detected</code></td><td>API 直接回傳含導覽屬性的 Entity，JSON 序列化時循環參考</td><td>用 <code>Select</code> 投影成匿名物件 / DTO（見第 9 節）</td></tr>
+      <tr><td><code>Cannot insert duplicate key row ... with unique index</code></td><td>違反唯一索引（例如重複網址）</td><td>寫入前先檢查並回 409；資料庫索引是最後防線</td></tr>
       <tr><td><code>Introducing FOREIGN KEY constraint … may cause cycles or multiple cascade paths</code></td><td>同一張表有兩條串聯刪除路徑（SQL Server 限制）</td><td>其中一條關聯改用 <code>.OnDelete(DeleteBehavior.NoAction)</code></td></tr>
     </tbody>
   </table></div>
 </section>
 
 <section id="refs">
-  <h2><span class="num">12</span>參考資料</h2>
+  <h2><span class="num">15</span>參考資料</h2>
   <ul>
     <li><a href="https://learn.microsoft.com/ef/core/get-started/overview/first-app">EF Core 入門教學（Microsoft Learn）</a></li>
     <li><a href="https://learn.microsoft.com/ef/core/modeling/">建立模型（慣例、Data Annotations、Fluent API）</a></li>

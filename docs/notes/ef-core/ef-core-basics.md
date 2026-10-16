@@ -160,6 +160,41 @@ API Endpoint ──DI 注入──▶ DbContext (DbSet<Blog>, DbSet<Post>)
 
 ---
 
+## 情境演練：從需求到實作
+
+> 完整版（含分析圖、API 程式碼、時序圖、驗收表）見 [ef-core-basics.html](ef-core-basics.html) 第 8–11 節。
+
+**需求：小型部落格平台 API**
+
+- R1 部落格有網址，網址不可重複
+- R2 部落格有多篇文章；標題必填、最多 200 字；有內容、發布時間（預設現在）
+- R3 文章可有多個標籤，標籤可共用，名稱不可重複
+- R4 刪除部落格時文章一併刪除
+- R5 API：某部落格文章列表（新到舊）、依標籤查文章、新增文章時可給標籤（不存在就建立）
+
+**分析四步驟**
+
+| 步驟 | 問題 | 結果 | 對應實作 |
+|------|------|------|---------|
+| ① 找名詞 | 哪些有自己的身分？ | Blog、Post、Tag（網址、標題等只是屬性；標籤要共用、要被查詢 → 獨立 Entity） | Entity class |
+| ② 找關係 | 幾對幾？ | Blog 1:N Post、Post N:N Tag | 導覽屬性 + 外鍵 |
+| ③ 找規則 | 必填、長度、唯一、刪除、預設 | R1 `HasIndex(Url).IsUnique()`；R2 `IsRequired().HasMaxLength(200)`、`HasDefaultValueSql("getutcdate()")`；R3 `HasIndex(Name).IsUnique()`；R4 `OnDelete(Cascade)` | Fluent API |
+| ④ 找操作 | 要查 / 寫什麼 | `POST /blogs`、`DELETE /blogs/{id}`、`GET /blogs/{id}/posts`、`GET /tags/{name}/posts`、`POST /blogs/{id}/posts` | Endpoint + LINQ |
+
+**實作重點**
+
+- 唯一性：程式先 `AnyAsync` 檢查回 409，資料庫唯一索引是最後防線（併發時程式檢查會漏）
+- API 不直接回傳 Entity（導覽屬性循環 → `A possible object cycle was detected`），用 `Select` 投影
+- 依標籤查：`db.Posts.Where(p => p.Tags.Any(t => t.Name == name))`
+- 新增文章帶標籤：先查已存在的 Tag（`names.Contains(t.Name)` → SQL `IN`），不存在的 `new Tag`，一次 `SaveChanges` 在同一交易寫入 Posts、Tags、PostTag
+- 輸入驗證（如標題長度）要在進資料庫前做並回 400，資料庫限制只是最後防線
+
+**驗收**：每條需求要能指出實作位置與驗證方式（例：R1 同網址建兩次 → 第二次 409；R4 刪部落格 → 文章與 PostTag 一併消失）。
+
+**需求變更（R6 文章瀏覽次數）**：屬性非 Entity → 加 `ViewCount` + `HasDefaultValue(0)` → `migrations add AddPostViewCount` → 確認 `Up()` 只有 `AddColumn` → `database update`。
+
+---
+
 ## 8. 從零連接資料庫
 
 ### 8.1 安裝套件與工具
@@ -331,6 +366,8 @@ Data Annotations（`[Required]`、`[MaxLength]`）寫在 class 上；Fluent API 
 | `Your startup project doesn't reference Microsoft.EntityFrameworkCore.Design` | 缺 Design 套件 | 安裝套件 |
 | `The Entity Framework tools version 'X' is older than that of the runtime 'Y'` | 版本不一致 | `dotnet tool update --global dotnet-ef --version 6.*` |
 | `A network-related or instance-specific error occurred` | 連不到資料庫 | `sqllocaldb info`、檢查連線字串 |
+| `A possible object cycle was detected` | API 回傳含導覽屬性的 Entity | 用 `Select` 投影成 DTO |
+| `Cannot insert duplicate key row ... with unique index` | 違反唯一索引 | 寫入前檢查並回 409 |
 | `Introducing FOREIGN KEY constraint ... may cause cycles or multiple cascade paths` | 多條串聯刪除路徑 | 其中一條 `.OnDelete(DeleteBehavior.NoAction)` |
 
 ## 參考資料
