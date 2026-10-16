@@ -22,3 +22,4 @@
 ### 學習筆記
 
 - [用 `dotnet new gitignore` 產生 .gitignore](notes/dotnet-cli/dotnet-new-gitignore.md) — #dotnet-cli #git 指令用法、`--force`、已追蹤檔案用 `git rm --cached`
+- [EF Core 連接資料庫（Code First）](notes/ef-core/connect-database.md) — #ef-core #migration 原理、套件、主鍵與關聯、DbContext、Migration、常見錯誤
