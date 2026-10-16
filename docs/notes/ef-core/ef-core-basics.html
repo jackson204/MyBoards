@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EF Core 入門圖解</title>
+<link rel="stylesheet" media="(prefers-color-scheme: light)" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<link rel="stylesheet" media="(prefers-color-scheme: dark)" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --fg: #1f2328;
+    --fg-muted: #59636e;
+    --border: #d1d9e0;
+    --accent: #6d28d9;
+    --accent-soft: #f3e8ff;
+    --tip: #1a7f37;
+    --tip-soft: #dafbe1;
+    --warn: #9a6700;
+    --warn-soft: #fff8c5;
+    --code-bg: #f6f8fa;
+    --inline-code-bg: rgba(129, 139, 152, .16);
+    --shadow: 0 1px 3px rgba(31, 35, 40, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #151b23;
+      --bg-card: #151b23;
+      --fg: #e6edf3;
+      --fg-muted: #9198a1;
+      --border: #3d444d;
+      --accent: #b58cff;
+      --accent-soft: #2a1d47;
+      --tip: #3fb950;
+      --tip-soft: #12261b;
+      --warn: #d29922;
+      --warn-soft: #2b2111;
+      --code-bg: #151b23;
+      --inline-code-bg: rgba(101, 108, 118, .3);
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.75 -apple-system, "Segoe UI", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  }
+  .layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); max-width: 1240px; margin: 0 auto; }
+  nav.toc {
+    position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto;
+    padding: 28px 14px 28px 20px; border-right: 1px solid var(--border); font-size: 14px;
+  }
+  nav.toc .label { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--fg-muted); margin: 0 8px 8px; }
+  nav.toc ol { list-style: none; margin: 0 0 18px; padding: 0; }
+  nav.toc a {
+    display: block; padding: 4px 8px; border-radius: 6px; line-height: 1.45;
+    color: var(--fg-muted); text-decoration: none;
+  }
+  nav.toc a:hover { color: var(--fg); background: var(--bg-soft); }
+  nav.toc a.active { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+  main { padding: 0 48px 96px; min-width: 0; max-width: 960px; }
+
+  header.hero { padding: 48px 0 28px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .eyebrow { color: var(--accent); font-weight: 700; font-size: 14px; letter-spacing: .06em; }
+  header.hero h1 { font-size: 2.2em; line-height: 1.3; margin: 6px 0 12px; }
+  header.hero p { color: var(--fg-muted); margin: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+  .chip { font-size: 12.5px; padding: 2px 10px; border-radius: 999px; background: var(--bg-soft); border: 1px solid var(--border); color: var(--fg-muted); }
+
+  section { padding-top: 8px; }
+  h2 { font-size: 1.55em; margin: 56px 0 8px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num {
+    flex: none; display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px;
+    background: var(--accent); color: #fff; font-size: 17px;
+  }
+  @media (prefers-color-scheme: dark) { h2 .num { color: #0d1117; } }
+  .lead { color: var(--fg-muted); margin: 0 0 20px; }
+  h3 { font-size: 1.18em; margin: 36px 0 10px; }
+  h4 { font-size: 1em; margin: 22px 0 8px; }
+  a { color: var(--accent); }
+
+  code { font-family: "Cascadia Code", Consolas, "JetBrains Mono", monospace; font-size: .87em; padding: .12em .4em; border-radius: 6px; background: var(--inline-code-bg); }
+  pre { margin: 12px 0 20px; background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; overflow-x: auto; line-height: 1.55; }
+  pre code, pre code.hljs { padding: 0; background: none; font-size: 13.5px; }
+  .file { display: inline-block; margin: 16px 0 -6px; font: 600 12.5px "Cascadia Code", Consolas, monospace; color: var(--fg-muted); }
+
+  .table-wrap { overflow-x: auto; margin: 14px 0 22px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 600; white-space: nowrap; }
+  td.yes { color: var(--tip); font-weight: 700; text-align: center; }
+  td.no { color: var(--fg-muted); text-align: center; }
+
+  .callout { margin: 18px 0; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-soft); }
+  .callout > strong:first-child { display: block; margin-bottom: 2px; }
+  .callout.tip { border-color: var(--tip); background: var(--tip-soft); }
+  .callout.tip > strong:first-child { color: var(--tip); }
+  .callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .callout.warn > strong:first-child { color: var(--warn); }
+  .callout p { margin: 4px 0; }
+
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 24px 0 8px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .card .k { font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: .04em; }
+  .card .v { margin-top: 4px; font-size: 14.5px; }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .compare > div { min-width: 0; }
+  .compare .tag { display: inline-block; font-size: 12.5px; font-weight: 700; padding: 1px 10px; border-radius: 999px; }
+  .compare .bad .tag { background: var(--warn-soft); color: var(--warn); }
+  .compare .good .tag { background: var(--tip-soft); color: var(--tip); }
+
+  figure { margin: 18px 0 26px; }
+  .diagram { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; overflow-x: auto; text-align: center; }
+  .diagram svg { max-width: 100%; height: auto; }
+  .diagram.loading { color: var(--fg-muted); font-size: 14px; }
+  figcaption { margin-top: 8px; font-size: 13.5px; color: var(--fg-muted); text-align: center; }
+
+  ol.steps { list-style: none; counter-reset: step; padding: 0; margin: 18px 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding: 0 0 6px 48px; }
+  ol.steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: 2px; width: 30px; height: 30px; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 700; font-size: 14px;
+    border: 2px solid var(--accent); color: var(--accent); background: var(--bg);
+  }
+  ol.steps > li::after { content: ""; position: absolute; left: 15px; top: 36px; bottom: 0; border-left: 2px dashed var(--border); }
+  ol.steps > li:last-child::after { display: none; }
+  ol.steps > li > h3 { margin: 4px 0 8px; }
+
+  footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--fg-muted); }
+
+  @media (max-width: 900px) {
+    .layout { display: block; }
+    nav.toc { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--border); padding: 16px; }
+    main { padding: 0 16px 64px; }
+    header.hero { padding-top: 28px; }
+    .compare { grid-template-columns: 1fr; }
+    ol.steps > li { padding-left: 42px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="目錄">
+  <div class="label">原理</div>
+  <ol>
+    <li><a href="#why-class">為什麼要有 class</a></li>
+    <li><a href="#why-orm">為什麼要用 ORM</a></li>
+    <li><a href="#architecture">EF Core 的組成</a></li>
+    <li><a href="#mapping">class 如何對應資料表</a></li>
+    <li><a href="#query">查詢的背後</a></li>
+    <li><a href="#save">寫入的背後</a></li>
+    <li><a href="#workflow">Code First 開發流程</a></li>
+  </ol>
+  <div class="label">實作</div>
+  <ol>
+    <li><a href="#tutorial">從零連接資料庫</a></li>
+    <li><a href="#config">設定規則：慣例與 Fluent API</a></li>
+    <li><a href="#migration-cmd">Migration 指令</a></li>
+    <li><a href="#errors">常見錯誤</a></li>
+    <li><a href="#refs">參考資料</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">EF CORE · ORM · CODE FIRST</div>
+  <h1>EF Core 入門：ORM 原理與連接資料庫</h1>
+  <p>從「為什麼需要 class 與 ORM」講起，搭配圖解，最後一步步用 ASP.NET Core 連上 SQL Server。範例沿用微軟官方教學的 <code>Blog</code> / <code>Post</code> 模型。</p>
+  <div class="chips">
+    <span class="chip">.NET 6</span><span class="chip">EF Core 6</span><span class="chip">SQL Server</span><span class="chip">Minimal API</span><span class="chip">最後更新 2026-10-17</span>
+  </div>
+  <div class="summary">
+    <div class="card"><div class="k">ORM 做什麼</div><div class="v">物件 ↔ 資料列、LINQ ↔ SQL 的自動翻譯</div></div>
+    <div class="card"><div class="k">class 的角色</div><div class="v">描述資料長相的藍圖，對應一張資料表</div></div>
+    <div class="card"><div class="k">核心物件</div><div class="v"><code>DbContext</code> 代表一次工作階段，<code>DbSet&lt;T&gt;</code> 代表一張表</div></div>
+    <div class="card"><div class="k">Code First</div><div class="v">改 class → Migration → 資料庫跟著更新</div></div>
+  </div>
+</header>
+
+<!-- ============================== 原理 ============================== -->
+
+<section id="why-class">
+  <h2><span class="num">1</span>為什麼要有 class？</h2>
+  <p class="lead">程式和資料庫是兩個說不同語言的世界，class 是程式這一端用來描述「資料長什麼樣子」的藍圖。</p>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th></th><th>C# 程式（物件世界）</th><th>資料庫（關聯世界）</th></tr></thead>
+    <tbody>
+      <tr><th>資料單位</th><td>一個物件 <code>Blog</code></td><td>一列 row</td></tr>
+      <tr><th>結構</th><td>class 的屬性</td><td>table 的欄位</td></tr>
+      <tr><th>關聯</th><td>物件參考：<code>blog.Posts</code></td><td>外鍵：<code>Posts.BlogId</code></td></tr>
+      <tr><th>操作方式</th><td>呼叫方法、LINQ</td><td>SQL 字串</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>這種落差稱為 <strong>Object-Relational Impedance Mismatch</strong>。要讓兩邊溝通，程式端需要一個明確的「資料形狀」——這就是 class。</p>
+
+  <div class="compare">
+    <div class="bad">
+      <span class="tag">沒有 class：直接讀欄位</span>
+<pre><code class="language-csharp">var cmd = new SqlCommand(
+    "SELECT BlogId, Url FROM Blogs WHERE BlogId = @id", conn);
+cmd.Parameters.AddWithValue("@id", 1);
+using var reader = cmd.ExecuteReader();
+while (reader.Read())
+{
+    // 欄位名打錯字：編譯會過，執行才爆炸
+    var url = (string)reader["Ulr"];
+    // 型別轉錯也要執行才知道
+    var id = (long)reader["BlogId"];
+}</code></pre>
+    </div>
+    <div class="good">
+      <span class="tag">有 class：編譯器幫你檢查</span>
+<pre><code class="language-csharp">public class Blog
+{
+    public int BlogId { get; set; }
+    public string Url { get; set; }
+}
+
+var blog = await db.Blogs
+    .FirstAsync(b =&gt; b.BlogId == 1);
+
+// 打錯屬性名 → 編譯錯誤、IDE 直接標紅
+Console.WriteLine(blog.Url);</code></pre>
+    </div>
+  </div>
+
+  <h3>class 的目的</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>目的</th><th>說明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>描述資料結構</strong></td><td>屬性 = 欄位，型別 = 欄位型別（<code>int</code> → <code>int</code>、<code>string</code> → <code>nvarchar(max)</code>、<code>DateTime?</code> → 可為 NULL 的 <code>datetime2</code>）</td></tr>
+      <tr><td><strong>型別安全</strong></td><td>編譯器檢查名稱與型別，IDE 提供自動完成</td></tr>
+      <tr><td><strong>Code First 的設計圖</strong></td><td>EF Core 讀 class 推導資料表結構，Migration 依此建表</td></tr>
+      <tr><td><strong>用物件表達關聯</strong></td><td><code>post.Blog.Url</code> 比手寫 JOIN 直覺</td></tr>
+      <tr><td><strong>在各層之間攜帶資料</strong></td><td>查詢結果是物件，可以再加工、序列化成 JSON 回給前端</td></tr>
+      <tr><td><strong>與資料庫解耦</strong></td><td>換資料庫時 class 與 LINQ 幾乎不用改，只換 Provider</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout">
+    <strong>名詞：Entity / POCO</strong>
+    <p>對應到資料表的 class 稱為 <strong>Entity（實體）</strong>。它不需要繼承任何 EF 的類別，就是普通的 class，所以也叫 POCO（Plain Old CLR Object）。</p>
+  </div>
+</section>
+
+<section id="why-orm">
+  <h2><span class="num">2</span>為什麼要用 ORM？</h2>
+  <p class="lead"><strong>ORM（Object-Relational Mapper）</strong>就是兩個世界之間的翻譯層，EF Core 是 .NET 官方的 ORM。</p>
+
+  <figure>
+    <div class="diagram"><script type="text/x-mermaid">
+flowchart LR
+    subgraph A["沒有 ORM：每一步都自己寫"]
+        direction TB
+        a1["手寫 SQL 字串"] --> a2["加參數防 SQL Injection"]
+        a2 --> a3["開連線、執行"]
+        a3 --> a4["逐欄讀值、轉型、塞進物件"]
+        a4 --> a5["判斷改了哪些欄位，組 UPDATE"]
+        a5 --> a6["自己管交易"]
+        a6 --> a7["手寫建表 / 改表腳本"]
+    end
+    subgraph B["有 ORM：只寫這些"]
+        direction TB
+        b1["LINQ 查詢 / 修改物件屬性"] --> b2["SaveChangesAsync()"]
+        b2 --> b3["dotnet ef migrations add"]
+    end
+    A ~~~ B
+    </script></div>
+    <figcaption>圖 2-1　有沒有 ORM，開發者要負責的範圍差很多</figcaption>
+  </figure>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>工作</th><th>沒有 ORM</th><th>EF Core 自動處理</th></tr></thead>
+    <tbody>
+      <tr><td>寫 SQL</td><td>每個查詢手寫字串</td><td>LINQ 轉譯成 SQL</td></tr>
+      <tr><td>資料列 → 物件</td><td><code>reader["欄位"]</code> 逐一轉型</td><td>自動實體化（Materialization）</td></tr>
+      <tr><td>防 SQL Injection</td><td>自己記得參數化</td><td>預設參數化</td></tr>
+      <tr><td>產生 UPDATE</td><td>自己判斷哪些欄位變了</td><td>Change Tracker 比對</td></tr>
+      <tr><td>交易</td><td>手動 <code>BeginTransaction</code></td><td>一次 <code>SaveChanges</code> 就是一個交易</td></tr>
+      <tr><td>資料表結構</td><td>手寫 DDL、手動同步</td><td>Migration 產生並保留版本紀錄</td></tr>
+      <tr><td>換資料庫</td><td>SQL 方言不同要改寫</td><td>換 Provider</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>.NET 常見的三種資料存取方式</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th></th><th>ADO.NET</th><th>Dapper（Micro-ORM）</th><th>EF Core（完整 ORM）</th></tr></thead>
+    <tbody>
+      <tr><th>SQL 誰寫</th><td>自己</td><td>自己</td><td>自動產生（也可自己寫）</td></tr>
+      <tr><th>結果 → 物件</th><td class="no">手動</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><th>變更追蹤</th><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td></tr>
+      <tr><th>Migration</th><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td></tr>
+      <tr><th>導覽屬性 / Include</th><td class="no">✗</td><td class="no">手動 multi-mapping</td><td class="yes">✓</td></tr>
+      <tr><th>執行效能</th><td>最快</td><td>接近 ADO.NET</td><td>稍慢（多一層轉譯與追蹤）</td></tr>
+      <tr><th>開發速度</th><td>慢</td><td>中</td><td>快</td></tr>
+      <tr><th>適合</th><td>極致效能、底層工具</td><td>複雜報表、手調 SQL</td><td>以 CRUD 與商業邏輯為主的應用</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout warn">
+    <strong>ORM 的代價</strong>
+    <p><b>效能開銷</b>：多了轉譯與變更追蹤。純讀取時可加 <code>AsNoTracking()</code>。</p>
+    <p><b>產生的 SQL 不一定最好</b>：最常見的是 <b>N+1 問題</b>，在迴圈裡讀導覽屬性，每筆都多發一次查詢。解法是用 <code>Include</code> 一次載入。</p>
+    <p><b>還是要懂 SQL</b>：把 log 等級調高就能看到 EF 實際送出的 SQL（見第 8 節）。</p>
+    <p><b>可以混用</b>：EF Core 也能執行自寫 SQL（<code>FromSqlInterpolated</code>），同一個專案也能搭配 Dapper 使用。</p>
+  </div>
+</section>
+
+<section id="architecture">
+  <h2><span class="num">3</span>EF Core 的組成</h2>
+  <p class="lead">一個請求從 API 走到資料庫，中間經過哪些角色。</p>
+
+  <figure>
+    <div class="diagram"><script type="text/x-mermaid">
+flowchart TB
+    subgraph App["你的 ASP.NET Core 應用程式"]
+        API["API Endpoint"]
+        CTX["BloggingContext : DbContext<br/>DbSet#lt;Blog#gt; / DbSet#lt;Post#gt;"]
+        ENT["Entity class<br/>Blog / Post"]
+    end
+    subgraph EF["EF Core"]
+        CORE["核心<br/>LINQ 轉譯 · Change Tracker · 實體化"]
+        PROV["Database Provider<br/>例如 SqlServer：產生 T-SQL"]
+    end
+    CFG[("appsettings.json<br/>連線字串")]
+    DB[("SQL Server")]
+
+    API -- "DI 注入" --> CTX
+    CTX -- "操作的資料型別" --> ENT
+    CTX --> CORE --> PROV
+    CFG -. "連線字串" .-> PROV
+    PROV -- "SQL" --> DB
+    DB -- "rows" --> PROV
+    </script></div>
+    <figcaption>圖 3-1　EF Core 架構</figcaption>
+  </figure>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>角色</th><th>負責什麼</th><th>對應資料庫</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Entity</strong></td><td>資料的形狀</td><td>一張 Table</td></tr>
+      <tr><td><strong><code>DbContext</code></strong></td><td>一次工作階段（Unit of Work）：查詢入口、追蹤變更、<code>SaveChanges()</code> 一次寫入</td><td>整個資料庫</td></tr>
+      <tr><td><strong><code>DbSet&lt;T&gt;</code></strong></td><td>DbContext 上的屬性，查詢與新增的入口</td><td>一張 Table</td></tr>
+      <tr><td><strong>Provider</strong></td><td>把 EF 的指令翻成特定資料庫的 SQL（SqlServer、Npgsql、Sqlite…）</td><td>資料庫種類</td></tr>
+      <tr><td><strong>連線字串</strong></td><td>資料庫在哪裡、怎麼登入</td><td>連線資訊</td></tr>
+      <tr><td><strong>Migration</strong></td><td>比對 class 的變化，產生建表 / 改表的程式碼</td><td>Schema 版本</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="mapping">
+  <h2><span class="num">4</span>class 如何對應資料表</h2>
+  <p class="lead">以官方範例 <code>Blog</code>、<code>Post</code>、<code>Tag</code> 為例，看 C# 這端和資料庫那端各長什麼樣子。</p>
+
+  <figure>
+    <div class="diagram"><script type="text/x-mermaid">
+classDiagram
+    direction LR
+    class Blog {
+        int BlogId
+        string Url
+        List~Post~ Posts
+    }
+    class Post {
+        int PostId
+        string Title
+        string Content
+        int BlogId
+        Blog Blog
+        List~Tag~ Tags
+    }
+    class Tag {
+        int TagId
+        string Name
+        List~Post~ Posts
+    }
+    Blog "1" -- "*" Post : 一對多
+    Post "*" -- "*" Tag : 多對多
+    </script></div>
+    <figcaption>圖 4-1　C# 端：Entity 與導覽屬性</figcaption>
+  </figure>
+
+  <figure>
+    <div class="diagram"><script type="text/x-mermaid">
+erDiagram
+    Blogs ||--o{ Posts : "BlogId"
+    Posts ||--o{ PostTag : "PostsPostId"
+    Tags ||--o{ PostTag : "TagsTagId"
+    Blogs {
+        int BlogId PK
+        nvarchar Url
+    }
+    Posts {
+        int PostId PK
+        nvarchar Title
+        nvarchar Content
+        int BlogId FK
+    }
+    Tags {
+        int TagId PK
+        nvarchar Name
+    }
+    PostTag {
+        int PostsPostId PK, FK
+        int TagsTagId PK, FK
+    }
+    </script></div>
+    <figcaption>圖 4-2　資料庫端：Migration 產生的資料表</figcaption>
+  </figure>
+
+  <div class="callout tip">
+    <strong>觀察重點</strong>
+    <p><b>導覽屬性不會變成欄位</b>：<code>Blog.Posts</code>、<code>Post.Blog</code> 只存在 C# 端，資料庫只有外鍵 <code>Posts.BlogId</code>。</p>
+    <p><b>多對多會多一張中間表</b>：C# 兩邊各放一個 <code>List</code>，EF Core 5 以上會自動建立 <code>PostTag</code>。</p>
+    <p><b>主鍵慣例</b>：名為 <code>Id</code> 或 <code>&lt;類別名&gt;Id</code> 的屬性會自動成為主鍵，<code>int</code> 主鍵預設為自動遞增。</p>
+  </div>
+</section>
+
+<section id="query">
+  <h2><span class="num">5</span>一次查詢在背後發生什麼</h2>
+  <p class="lead">以 <code>GET /blogs</code> 查出網址含 "dotnet" 的部落格為例。</p>
+
+  <figure>
+    <div class="diagram"><script type="text/x-mermaid">
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant API as API Endpoint
+    participant DI as DI Container
+    participant Ctx as BloggingContext
+    participant EF as EF Core + Provider
+    participant DB as SQL Server
+
+    C->>API: GET /blogs
+    API->>DI: 需要 BloggingContext
+    DI-->>API: 建立本次 request 專用的實例（Scoped）
+    API->>Ctx: db.Blogs.Where(b =#gt; b.Url.Contains("dotnet")).ToListAsync()
+    Ctx->>EF: LINQ 運算式樹（Expression Tree）
+    EF->>EF: 轉譯成 SQL
+    EF->>DB: SELECT ... FROM Blogs WHERE Url LIKE N'%dotnet%'
+    DB-->>EF: 資料列 rows
+    EF->>EF: rows 轉成 Blog 物件，登記到 Change Tracker
+    EF-->>API: List#lt;Blog#gt;
+    API-->>C: 200 OK（JSON）
+    Note over DI,Ctx: request 結束，DbContext 被 Dispose，連線歸還連線池
+    </script></div>
+    <figcaption>圖 5-1　查詢時序圖</figcaption>
+  </figure>
+
+  <div class="callout">
+    <strong>延遲執行（Deferred Execution）</strong>
+    <p><code>Where</code>、<code>OrderBy</code> 只是在組裝查詢，不會連資料庫；直到 <code>ToListAsync()</code>、<code>FirstAsync()</code>、<code>CountAsync()</code> 等「取值」方法才真正送出 SQL。</p>
+  </div>
+</section>
+
+<section id="save">
+  <h2><span class="num">6</span>一次寫入在背後發生什麼</h2>
+  <p class="lead">DbContext 會記住你對物件做了什麼（Change Tracking），呼叫 <code>SaveChanges</code> 時才一次寫入。</p>
+
+  <figure>
+    <div class="diagram"><script type="text/x-mermaid">
+sequenceDiagram
+    autonumber
+    participant API as 你的程式
+    participant Ctx as BloggingContext
+    participant CT as Change Tracker
+    participant DB as SQL Server
+
+    API->>Ctx: db.Blogs.Add(new Blog { Url = "..." })
+    Ctx->>CT: 標記為 Added（還沒寫入）
+    API->>Ctx: var post = await db.Posts.FirstAsync()
+    Ctx->>DB: SELECT TOP(1) ...
+    DB-->>Ctx: row
+    Ctx->>CT: 記錄 post 為 Unchanged，保存原始值
+    API->>API: post.Title = "新標題"（只改 C# 物件）
+    API->>Ctx: await db.SaveChangesAsync()
+    Ctx->>CT: 比對原始值，post 變成 Modified
+    Ctx->>DB: BEGIN TRANSACTION
+    Ctx->>DB: INSERT INTO Blogs ...
+    Ctx->>DB: UPDATE Posts SET Title = ... WHERE PostId = ...
+    Ctx->>DB: COMMIT
+    DB-->>Ctx: 成功，回傳新 Blog 的自動遞增 BlogId
+    Ctx->>CT: 全部改回 Unchanged
+    </script></div>
+    <figcaption>圖 6-1　寫入時序圖</figcaption>
+  </figure>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Entity 狀態</th><th>何時出現</th><th>SaveChanges 時</th></tr></thead>
+    <tbody>
+      <tr><td><code>Added</code></td><td>呼叫 <code>Add()</code></td><td><code>INSERT</code></td></tr>
+      <tr><td><code>Unchanged</code></td><td>剛查詢出來 / 剛存檔完</td><td>不做事</td></tr>
+      <tr><td><code>Modified</code></td><td>改了屬性值</td><td><code>UPDATE</code>（只更新有變的欄位）</td></tr>
+      <tr><td><code>Deleted</code></td><td>呼叫 <code>Remove()</code></td><td><code>DELETE</code></td></tr>
+      <tr><td><code>Detached</code></td><td>不受 DbContext 追蹤</td><td>不做事</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="workflow">
+  <h2><span class="num">7</span>Code First 開發流程</h2>
+  <p class="lead">以 C# class 為準，資料庫結構跟著 Migration 演進。</p>
+
+  <figure>
+    <div class="diagram"><script type="text/x-mermaid">
+flowchart LR
+    A["撰寫 / 修改<br/>Entity class"] --> B["在 OnModelCreating<br/>設定規則與關聯"]
+    B --> C["dotnet ef migrations add 名稱"]
+    C --> D{"Up() / Down()<br/>符合預期？"}
+    D -- "否" --> E["dotnet ef migrations remove"] --> A
+    D -- "是" --> F["dotnet ef database update"]
+    F --> G[("資料庫結構更新<br/>__EFMigrationsHistory 多一筆")]
+    G --> H["commit：Entity + Migrations"]
+    H -. "下一次需求變更" .-> A
+    </script></div>
+    <figcaption>圖 7-1　Code First 開發循環</figcaption>
+  </figure>
+
+  <div class="callout">
+    <strong>Code First 與 Database First</strong>
+    <p><b>Code First</b>：先寫 class，再由 Migration 產生資料庫，適合新專案。<b>Database First</b>：資料庫已經存在，用 <code>dotnet ef dbcontext scaffold</code> 反向產生 class 和 DbContext。</p>
+  </div>
+</section>
+
+<!-- ============================== 實作 ============================== -->
+
+<section id="tutorial">
+  <h2><span class="num">8</span>從零連接資料庫</h2>
+  <p class="lead">以 .NET 6 Minimal API + SQL Server LocalDB 為例，跟著做一次。</p>
+
+  <ol class="steps">
+    <li>
+      <h3>安裝 NuGet 套件</h3>
+      <p>在 <code>.csproj</code> 所在資料夾執行，版本跟 .NET 同一大版號：</p>
+<pre><code class="language-bash">dotnet add package Microsoft.EntityFrameworkCore.SqlServer --version 6.0.*
+dotnet add package Microsoft.EntityFrameworkCore.Design --version 6.0.*</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>套件</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>Microsoft.EntityFrameworkCore.SqlServer</code></td><td>EF Core 本體 + SQL Server Provider</td></tr>
+          <tr><td><code>Microsoft.EntityFrameworkCore.Design</code></td><td>讓 <code>dotnet ef</code> 讀取專案、產生 Migration</td></tr>
+        </tbody>
+      </table></div>
+    </li>
+
+    <li>
+      <h3>安裝 <code>dotnet-ef</code> 命令列工具</h3>
+<pre><code class="language-bash">dotnet tool install --global dotnet-ef --version 6.*
+dotnet ef --version</code></pre>
+    </li>
+
+    <li>
+      <h3>準備資料庫</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>選項</th><th>適合</th><th>連線字串範例</th></tr></thead>
+        <tbody>
+          <tr><td><strong>SQL Server LocalDB</strong></td><td>Windows 本機開發，免設定</td><td><code>Server=(localdb)\mssqllocaldb;Database=Blogging;Trusted_Connection=True;</code></td></tr>
+          <tr><td>SQL Server（Docker）</td><td>跨平台、接近正式環境</td><td><code>Server=localhost,1433;Database=Blogging;User Id=sa;Password=…;TrustServerCertificate=True;</code></td></tr>
+          <tr><td>SQLite</td><td>最輕量，一個檔案</td><td><code>Data Source=blogging.db</code>（套件改用 <code>…Sqlite</code>，呼叫 <code>UseSqlite</code>）</td></tr>
+        </tbody>
+      </table></div>
+      <p>確認 LocalDB：執行 <code>sqllocaldb info</code> 應看到 <code>MSSQLLocalDB</code>。</p>
+    </li>
+
+    <li>
+      <h3>撰寫 Entity</h3>
+      <span class="file">Models/Blog.cs</span>
+<pre><code class="language-csharp">public class Blog
+{
+    public int BlogId { get; set; }                     // 主鍵（慣例：&lt;類別名&gt;Id）
+    public string Url { get; set; }
+
+    public List&lt;Post&gt; Posts { get; set; } = new();      // 一對多：一個 Blog 有多篇 Post
+}</code></pre>
+      <span class="file">Models/Post.cs</span>
+<pre><code class="language-csharp">public class Post
+{
+    public int PostId { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
+
+    public int BlogId { get; set; }                     // 外鍵
+    public Blog Blog { get; set; }                      // 導覽屬性
+
+    public List&lt;Tag&gt; Tags { get; set; } = new();        // 多對多
+}</code></pre>
+      <span class="file">Models/Tag.cs</span>
+<pre><code class="language-csharp">public class Tag
+{
+    public int TagId { get; set; }
+    public string Name { get; set; }
+
+    public List&lt;Post&gt; Posts { get; set; } = new();      // 多對多的另一端
+}</code></pre>
+    </li>
+
+    <li>
+      <h3>建立 DbContext</h3>
+      <span class="file">Data/BloggingContext.cs</span>
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;
+
+public class BloggingContext : DbContext
+{
+    public BloggingContext(DbContextOptions&lt;BloggingContext&gt; options) : base(options)
+    {
+    }
+
+    public DbSet&lt;Blog&gt; Blogs { get; set; }
+    public DbSet&lt;Post&gt; Posts { get; set; }
+    public DbSet&lt;Tag&gt; Tags { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity&lt;Blog&gt;(eb =&gt;
+        {
+            eb.Property(b =&gt; b.Url).IsRequired().HasMaxLength(500);
+
+            eb.HasMany(b =&gt; b.Posts)
+              .WithOne(p =&gt; p.Blog)
+              .HasForeignKey(p =&gt; p.BlogId);
+        });
+
+        modelBuilder.Entity&lt;Post&gt;(eb =&gt;
+        {
+            eb.Property(p =&gt; p.Title).IsRequired().HasMaxLength(200);
+            eb.HasMany(p =&gt; p.Tags).WithMany(t =&gt; t.Posts);
+        });
+    }
+}</code></pre>
+      <div class="callout tip">
+        <strong>建構子接收 options 的原因</strong>
+        <p>連線字串和使用哪個資料庫由外部（DI 註冊時）決定，DbContext 本身不寫死。這樣測試時可以換成別的資料庫，例如 SQLite in-memory。</p>
+      </div>
+    </li>
+
+    <li>
+      <h3>設定連線字串</h3>
+      <span class="file">appsettings.json</span>
+<pre><code class="language-json">{
+  "ConnectionStrings": {
+    "BloggingDb": "Server=(localdb)\\mssqllocaldb;Database=Blogging;Trusted_Connection=True;"
+  }
+}</code></pre>
+      <div class="callout warn">
+        <strong>注意</strong>
+        <p>JSON 裡的反斜線要寫成 <code>\\</code>。含密碼的連線字串不要 commit，開發時用 User Secrets：<code>dotnet user-secrets set "ConnectionStrings:BloggingDb" "…"</code>。</p>
+      </div>
+    </li>
+
+    <li>
+      <h3>註冊 DbContext 到 DI</h3>
+      <span class="file">Program.cs</span>
+<pre><code class="language-csharp">using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext&lt;BloggingContext&gt;(options =&gt;
+    options.UseSqlServer(builder.Configuration.GetConnectionString("BloggingDb")));
+
+var app = builder.Build();</code></pre>
+      <p><code>AddDbContext</code> 預設是 <strong>Scoped</strong>，也就是每個 HTTP request 各一個實例。DbContext 不是 thread-safe，不要註冊成 Singleton。</p>
+    </li>
+
+    <li>
+      <h3>建立 Migration 並更新資料庫</h3>
+<pre><code class="language-bash">dotnet ef migrations add InitialCreate
+dotnet ef database update</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>產生的檔案</th><th>內容</th></tr></thead>
+        <tbody>
+          <tr><td><code>&lt;時間戳&gt;_InitialCreate.cs</code></td><td><code>Up()</code> 建表、<code>Down()</code> 還原</td></tr>
+          <tr><td><code>&lt;時間戳&gt;_InitialCreate.Designer.cs</code></td><td>該版本的模型 metadata</td></tr>
+          <tr><td><code>BloggingContextModelSnapshot.cs</code></td><td>目前模型的完整快照，下次新增 Migration 時拿來比對</td></tr>
+        </tbody>
+      </table></div>
+      <p>Migration 檔要 commit 進版本控制，它就是資料庫結構的歷史紀錄。</p>
+    </li>
+
+    <li>
+      <h3>在 API 中使用</h3>
+<pre><code class="language-csharp">app.MapGet("/blogs", async (BloggingContext db) =&gt;
+    await db.Blogs
+        .AsNoTracking()                 // 只讀取，不需要變更追蹤
+        .Include(b =&gt; b.Posts)          // 一起載入關聯，避免 N+1
+        .ToListAsync());
+
+app.MapPost("/blogs", async (BloggingContext db, Blog blog) =&gt;
+{
+    db.Blogs.Add(blog);                 // 只是標記為 Added
+    await db.SaveChangesAsync();        // 這時才送出 INSERT
+    return Results.Created($"/blogs/{blog.BlogId}", blog);
+});</code></pre>
+      <div class="callout tip">
+        <strong>看 EF 實際送出的 SQL</strong>
+        <p>在 <code>appsettings.Development.json</code> 的 <code>Logging:LogLevel</code> 加上 <code>"Microsoft.EntityFrameworkCore.Database.Command": "Information"</code>。</p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<section id="config">
+  <h2><span class="num">9</span>設定規則：慣例與 Fluent API</h2>
+  <p class="lead">EF Core 先套用「慣例（Convention）」，再用 Data Annotations 或 Fluent API 覆寫。</p>
+
+  <h3>常見慣例</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>慣例</th><th>效果</th></tr></thead>
+    <tbody>
+      <tr><td>屬性名為 <code>Id</code> 或 <code>&lt;類別名&gt;Id</code></td><td>成為主鍵；<code>int</code> / <code>long</code> 會自動遞增</td></tr>
+      <tr><td>屬性名為 <code>&lt;導覽屬性名&gt;Id</code>，型別與對方主鍵相同</td><td>成為外鍵</td></tr>
+      <tr><td>兩邊都有集合導覽屬性</td><td>多對多，自動建立中間表</td></tr>
+      <tr><td>可為 null 的型別（<code>int?</code>、<code>DateTime?</code>）</td><td>欄位允許 NULL</td></tr>
+      <tr><td><code>DbSet</code> 屬性名稱</td><td>資料表名稱</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Data Annotations 與 Fluent API</h3>
+  <div class="compare">
+    <div>
+      <span class="tag" style="background:var(--bg-soft);color:var(--fg-muted)">Data Annotations：寫在 class 上</span>
+<pre><code class="language-csharp">public class Blog
+{
+    public int BlogId { get; set; }
+
+    [Required, MaxLength(500)]
+    public string Url { get; set; }
+}</code></pre>
+    </div>
+    <div>
+      <span class="tag" style="background:var(--accent-soft);color:var(--accent)">Fluent API：集中在 DbContext</span>
+<pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;()
+    .Property(b =&gt; b.Url)
+    .IsRequired()
+    .HasMaxLength(500);</code></pre>
+    </div>
+  </div>
+  <p>兩種方式可以混用，衝突時 <strong>Fluent API 優先</strong>。Fluent API 能設定的東西比較多，例如刪除行為、精度、預設值 SQL，而且 Entity 能保持乾淨，所以設定多的時候建議集中寫在 Fluent API。</p>
+
+  <h3>常用 Fluent API</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>方法</th><th>效果</th></tr></thead>
+    <tbody>
+      <tr><td><code>HasKey(x =&gt; x.Code)</code></td><td>指定主鍵</td></tr>
+      <tr><td><code>IsRequired()</code></td><td>NOT NULL</td></tr>
+      <tr><td><code>HasMaxLength(n)</code></td><td><code>nvarchar(n)</code></td></tr>
+      <tr><td><code>HasColumnType("varchar(200)")</code></td><td>直接指定 SQL 型別</td></tr>
+      <tr><td><code>HasColumnName("X")</code></td><td>欄位名稱</td></tr>
+      <tr><td><code>HasPrecision(18, 2)</code></td><td>decimal 精度</td></tr>
+      <tr><td><code>HasDefaultValue(v)</code> / <code>HasDefaultValueSql("getutcdate()")</code></td><td>預設值</td></tr>
+      <tr><td><code>HasIndex(x =&gt; x.Url).IsUnique()</code></td><td>唯一索引</td></tr>
+      <tr><td><code>HasOne / HasMany / WithOne / WithMany</code></td><td>設定關聯</td></tr>
+      <tr><td><code>OnDelete(DeleteBehavior.Restrict)</code></td><td>刪除行為（Cascade、Restrict、SetNull、NoAction）</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="migration-cmd">
+  <h2><span class="num">10</span>Migration 指令速查</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>指令</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td><code>dotnet ef migrations add &lt;名稱&gt;</code></td><td>依模型變更新增 Migration</td></tr>
+      <tr><td><code>dotnet ef database update</code></td><td>套用到最新版本</td></tr>
+      <tr><td><code>dotnet ef database update &lt;名稱&gt;</code></td><td>退回或前進到指定 Migration</td></tr>
+      <tr><td><code>dotnet ef migrations remove</code></td><td>刪除最後一個、尚未套用的 Migration</td></tr>
+      <tr><td><code>dotnet ef migrations list</code></td><td>列出 Migration 及是否已套用</td></tr>
+      <tr><td><code>dotnet ef migrations script</code></td><td>產生 SQL 腳本（部署到正式環境用）</td></tr>
+      <tr><td><code>dotnet ef database drop</code></td><td>刪除整個資料庫（開發時重來用）</td></tr>
+      <tr><td><code>dotnet ef dbcontext scaffold "&lt;連線字串&gt;" Microsoft.EntityFrameworkCore.SqlServer</code></td><td>Database First：從現有資料庫產生 class</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout warn">
+    <strong>套用前先看 Up()</strong>
+    <p>出現 <code>DropColumn</code> 或 <code>DropTable</code> 代表資料會消失。屬性改名時，EF 可能誤判成「刪掉舊欄位、新增新欄位」，這時要手動改成 <code>RenameColumn</code>。</p>
+  </div>
+</section>
+
+<section id="errors">
+  <h2><span class="num">11</span>常見錯誤</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>錯誤訊息</th><th>原因</th><th>解法</th></tr></thead>
+    <tbody>
+      <tr><td><code>The entity type 'X' requires a primary key to be defined</code></td><td>Entity 沒有主鍵</td><td>加上 <code>Id</code> 屬性，或用 <code>HasKey</code> 指定</td></tr>
+      <tr><td><code>No store type was specified for the decimal property</code></td><td>decimal 沒有指定精度（警告）</td><td><code>HasPrecision(18, 2)</code></td></tr>
+      <tr><td><code>dotnet-ef does not exist</code> / <code>command or file was not found</code></td><td>沒裝 <code>dotnet-ef</code></td><td>回到步驟 2</td></tr>
+      <tr><td><code>Your startup project doesn't reference Microsoft.EntityFrameworkCore.Design</code></td><td>缺少 Design 套件</td><td>回到步驟 1</td></tr>
+      <tr><td><code>The Entity Framework tools version 'X' is older than that of the runtime 'Y'</code></td><td>工具與套件版本不一致</td><td><code>dotnet tool update --global dotnet-ef --version 6.*</code></td></tr>
+      <tr><td><code>A network-related or instance-specific error occurred…</code></td><td>連不到資料庫</td><td>確認 <code>sqllocaldb info</code>、連線字串、JSON 中的 <code>\\</code></td></tr>
+      <tr><td><code>Introducing FOREIGN KEY constraint … may cause cycles or multiple cascade paths</code></td><td>同一張表有兩條串聯刪除路徑（SQL Server 限制）</td><td>其中一條關聯改用 <code>.OnDelete(DeleteBehavior.NoAction)</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="refs">
+  <h2><span class="num">12</span>參考資料</h2>
+  <ul>
+    <li><a href="https://learn.microsoft.com/ef/core/get-started/overview/first-app">EF Core 入門教學（Microsoft Learn）</a></li>
+    <li><a href="https://learn.microsoft.com/ef/core/modeling/">建立模型（慣例、Data Annotations、Fluent API）</a></li>
+    <li><a href="https://learn.microsoft.com/ef/core/modeling/relationships">關聯設定</a></li>
+    <li><a href="https://learn.microsoft.com/ef/core/change-tracking/">變更追蹤</a></li>
+    <li><a href="https://learn.microsoft.com/ef/core/managing-schemas/migrations/">Migrations 概觀</a></li>
+    <li><a href="https://learn.microsoft.com/ef/core/cli/dotnet">dotnet ef 指令參考</a></li>
+    <li><a href="https://learn.microsoft.com/ef/core/performance/">效能指南（AsNoTracking、N+1 等）</a></li>
+  </ul>
+</section>
+
+<footer>同一份內容的純文字版：<a href="ef-core-basics.md">ef-core-basics.md</a>（方便用編輯器搜尋）</footer>
+</main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+(async function () {
+  if (window.hljs) document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+
+  // 目錄：捲動時標示目前章節
+  const links = new Map([...document.querySelectorAll('nav.toc a')].map(a => [a.getAttribute('href').slice(1), a]));
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      links.forEach(a => a.classList.remove('active'));
+      links.get(e.target.id)?.classList.add('active');
+    });
+  }, { rootMargin: '0px 0px -70% 0px' });
+  document.querySelectorAll('main section[id]').forEach(s => observer.observe(s));
+
+  // 圖表：把 <script type="text/x-mermaid"> 換成 Mermaid 圖
+  const sources = [...document.querySelectorAll('script[type="text/x-mermaid"]')];
+  if (!window.mermaid) {
+    sources.forEach(s => { s.parentElement.classList.add('loading'); s.parentElement.textContent = '圖表需要網路連線才能顯示'; });
+    return;
+  }
+  const nodes = sources.map(s => {
+    const pre = document.createElement('pre');
+    pre.className = 'mermaid';
+    pre.textContent = s.textContent.trim();
+    pre.style.cssText = 'margin:0;border:0;background:none;padding:0';
+    s.replaceWith(pre);
+    return pre;
+  });
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default' });
+  await mermaid.run({ nodes });
+})();
+</script>
+</body>
+</html>
