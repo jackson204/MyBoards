@@ -15,18 +15,265 @@
 
 ## 1. 原理
 
+> 本文的圖用 [Mermaid](https://mermaid.js.org/) 撰寫：GitHub 會直接渲染；Rider 需在
+> `Settings → Languages & Frameworks → Markdown` 勾選 **Mermaid** 後，在 Markdown 預覽中顯示。
+
+### 1.1 為什麼要有 class？
+
+程式和資料庫是**兩個不同的世界**：
+
+| | C# 程式（物件世界） | 資料庫（關聯世界） |
+|---|---|---|
+| 資料單位 | 物件 `WorkItem` | 一列 row |
+| 結構 | class 的屬性 | table 的欄位 |
+| 關聯 | 物件參考：`workItem.Comments` | 外鍵：`Comments.WorkItemId` |
+| 操作 | 呼叫方法、LINQ | SQL 字串 |
+
+兩邊的表達方式不一樣（稱為 *Object-Relational Impedance Mismatch*），所以需要一個「翻譯層」。**class 就是程式這一端用來描述「資料長什麼樣子」的藍圖**。
+
+#### 沒有 class 會怎樣？（ADO.NET 直接寫 SQL）
+
+```csharp
+using var conn = new SqlConnection(connectionString);
+conn.Open();
+var cmd = new SqlCommand("SELECT Id, State, Priority FROM WorkItems WHERE Priority > @p", conn);
+cmd.Parameters.AddWithValue("@p", 1);
+using var reader = cmd.ExecuteReader();
+while (reader.Read())
+{
+    var state = (string)reader["Staet"];    // 打錯字：編譯會過，執行才爆炸
+    var priority = (int)reader["Priority"]; // 型別轉錯也要執行才知道
+}
 ```
-WorkItem 等 C# class
-        │   你操作物件：context.WorkItems.Add(item)
-        ▼
-EF Core（ORM，物件關聯對映）        把 LINQ / 物件變更轉成 SQL
-        │
-        ▼
-Database Provider（如 SqlServer）   產生「該資料庫」的 SQL 方言
-        │   用 Connection String 找到資料庫
-        ▼
-SQL Server / PostgreSQL / SQLite …
+
+#### 有 class + EF Core
+
+```csharp
+var items = await db.WorkItems
+    .Where(wi => wi.Priority > 1)   // 打錯屬性名 → 編譯錯誤，IDE 直接標紅
+    .ToListAsync();                 // 拿到的就是 List<WorkItem>，型別確定
 ```
+
+#### class 的目的整理
+
+| 目的 | 說明 |
+|------|------|
+| **描述資料結構** | 屬性 = 欄位，型別 = 欄位型別（`int`→`int`、`string`→`nvarchar`、`DateTime?`→可為 NULL 的 `datetime2`） |
+| **型別安全** | 編譯器幫你檢查欄位名稱與型別，IntelliSense 自動完成 |
+| **Code First 的「設計圖」** | EF Core 讀 class 推導出資料表結構，Migration 依此建表 |
+| **用物件表達關聯** | `workItem.Author.Email` 比手寫 JOIN 直覺 |
+| **承載資料在各層之間流動** | 查詢結果變成物件，可以再處理、序列化成 JSON 回傳給前端 |
+| **與資料庫解耦** | 換資料庫（SQL Server → PostgreSQL）時，class 和 LINQ 幾乎不用改，只換 Provider |
+
+> 這種「只有屬性、對應到資料表」的 class 稱為 **Entity**（實體），也常被叫做 POCO（Plain Old CLR Object）——它不需要繼承任何 EF 的類別，就是普通的 class。
+
+### 1.2 class 如何對應到資料表
+
+左邊是 C# class（含導覽屬性），右邊是 Migration 產生出來的資料表：
+
+```mermaid
+classDiagram
+    direction LR
+    class User {
+        Guid Id
+        string FirstName
+        string LastName
+        string Email
+        Address Address
+        List~WorkItem~ WorkItems
+        List~Comment~ Comments
+    }
+    class Address {
+        Guid Id
+        string Country
+        string City
+        Guid UserId
+        User User
+    }
+    class WorkItem {
+        int Id
+        string State
+        int Priority
+        decimal Effort
+        Guid AuthorId
+        User Author
+        List~Comment~ Comments
+        List~Tag~ Tags
+    }
+    class Comment {
+        int Id
+        string Message
+        int WorkItemId
+        Guid AuthorId
+    }
+    class Tag {
+        int Id
+        string Value
+        List~WorkItem~ WorkItems
+    }
+    User "1" -- "1" Address
+    User "1" -- "*" WorkItem : Author
+    User "1" -- "*" Comment : Author
+    WorkItem "1" -- "*" Comment
+    WorkItem "*" -- "*" Tag
+```
+
+```mermaid
+erDiagram
+    Users ||--|| Addresses : "UserId"
+    Users ||--o{ WorkItems : "AuthorId"
+    Users ||--o{ Comments : "AuthorId"
+    WorkItems ||--o{ Comments : "WorkItemId"
+    WorkItems ||--o{ TagWorkItem : "WorkItemsId"
+    Tags ||--o{ TagWorkItem : "TagsId"
+
+    Users {
+        uniqueidentifier Id PK
+        nvarchar FirstName
+        nvarchar Email
+    }
+    Addresses {
+        uniqueidentifier Id PK
+        uniqueidentifier UserId FK
+        nvarchar City
+    }
+    WorkItems {
+        int Id PK
+        nvarchar State
+        int Priority
+        decimal Effort
+        uniqueidentifier AuthorId FK
+    }
+    Comments {
+        int Id PK
+        nvarchar Message
+        int WorkItemId FK
+        uniqueidentifier AuthorId FK
+    }
+    Tags {
+        int Id PK
+        nvarchar Value
+    }
+    TagWorkItem {
+        int TagsId PK, FK
+        int WorkItemsId PK, FK
+    }
+```
+
+重點觀察：
+
+- **導覽屬性（`Author`、`Comments`、`Tags`）不會變成欄位**，它們只存在於 C# 端；資料庫裡只看得到外鍵欄位。
+- **多對多**在 C# 是兩邊各放一個 `List`，在資料庫則多出一張中間表 `TagWorkItem`（EF Core 自動建立）。
+
+### 1.3 整體架構：誰負責什麼
+
+```mermaid
+flowchart TB
+    subgraph App["ASP.NET Core 應用程式"]
+        API["API Endpoint<br/>app.MapGet / MapPost"]
+        CTX["MyBoardsContext : DbContext<br/>DbSet#lt;WorkItem#gt; ..."]
+        ENT["Entity class<br/>WorkItem / User / Comment ..."]
+    end
+    subgraph EF["EF Core"]
+        CORE["核心：LINQ 轉譯、Change Tracker、物件實體化"]
+        PROV["Provider：Microsoft.EntityFrameworkCore.SqlServer<br/>產生 T-SQL 方言"]
+    end
+    CFG[("appsettings.json<br/>ConnectionStrings")]
+    DB[("SQL Server<br/>MyBoardsDb")]
+
+    API -- "注入 (DI)" --> CTX
+    CTX -- "操作的資料型別" --> ENT
+    CTX --> CORE
+    CORE --> PROV
+    CFG -. "連線字串" .-> PROV
+    PROV -- "SQL" --> DB
+    DB -- "rows" --> PROV
+```
+
+### 1.4 一次查詢在背後發生什麼（時序圖）
+
+以 `GET /workitems` 查詢 Priority > 1 的 WorkItem 為例：
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Client (Swagger)
+    participant API as API Endpoint
+    participant DI as DI Container
+    participant Ctx as MyBoardsContext
+    participant EF as EF Core + Provider
+    participant DB as SQL Server
+
+    C->>API: GET /workitems
+    API->>DI: 需要 MyBoardsContext
+    DI-->>API: 建立本次 request 專用的實例 (Scoped)
+    API->>Ctx: db.WorkItems.Where(wi =#gt; wi.Priority #gt; 1).ToListAsync()
+    Ctx->>EF: LINQ 運算式樹 (Expression Tree)
+    EF->>EF: 轉譯成 SQL
+    EF->>DB: SELECT ... FROM WorkItems WHERE Priority #gt; 1
+    DB-->>EF: 資料列 (rows)
+    EF->>EF: rows → new WorkItem（實體化）<br/>並登記到 Change Tracker
+    EF-->>API: List#lt;WorkItem#gt;
+    API-->>C: 200 OK (JSON)
+    Note over DI,Ctx: Request 結束 → DbContext 被 Dispose，連線歸還連線池
+```
+
+> `Where(...)` 本身不會查資料庫，只是在組裝查詢；直到 `ToListAsync()`、`FirstAsync()` 等「取值」方法才真的送出 SQL（**延遲執行 Deferred Execution**）。
+
+### 1.5 一次寫入在背後發生什麼（時序圖）
+
+DbContext 會「記住」你對物件做了什麼（Change Tracking），`SaveChanges` 時才一次寫入：
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant API as API Endpoint
+    participant Ctx as MyBoardsContext
+    participant CT as Change Tracker
+    participant DB as SQL Server
+
+    API->>Ctx: db.Tags.Add(new Tag { Value = "bug" })
+    Ctx->>CT: 標記為 Added（尚未寫入資料庫）
+    API->>Ctx: var wi = await db.WorkItems.FirstAsync(...)
+    Ctx->>DB: SELECT TOP(1) ...
+    DB-->>Ctx: row
+    Ctx->>CT: 記錄 wi 為 Unchanged，並保存原始值
+    API->>API: wi.State = "Done"（只是改 C# 物件）
+    API->>Ctx: await db.SaveChangesAsync()
+    Ctx->>CT: 比對原始值 → wi 變成 Modified
+    Ctx->>DB: BEGIN TRANSACTION
+    Ctx->>DB: INSERT INTO Tags ...
+    Ctx->>DB: UPDATE WorkItems SET State = 'Done' WHERE Id = ...
+    Ctx->>DB: COMMIT
+    DB-->>Ctx: 成功（取回新 Tag 的自動遞增 Id）
+    Ctx->>CT: 全部改回 Unchanged
+```
+
+Entity 在 Change Tracker 中的狀態：
+
+| 狀態 | 何時出現 | SaveChanges 時 |
+|------|---------|---------------|
+| `Added` | `Add()` | `INSERT` |
+| `Unchanged` | 剛查詢出來 / 剛存檔 | 不做事 |
+| `Modified` | 改了屬性值 | `UPDATE`（只更新有改的欄位） |
+| `Deleted` | `Remove()` | `DELETE` |
+| `Detached` | 不受追蹤 | 不做事 |
+
+### 1.6 Code First 開發流程（流程圖）
+
+```mermaid
+flowchart LR
+    A["撰寫 / 修改<br/>Entity class"] --> B["在 OnModelCreating<br/>設定規則與關聯"]
+    B --> C["dotnet ef migrations add 名稱"]
+    C --> D{"檢查產生的<br/>Up() / Down()<br/>符合預期？"}
+    D -- "否" --> E["dotnet ef migrations remove"] --> A
+    D -- "是" --> F["dotnet ef database update"]
+    F --> G[("資料庫結構更新<br/>__EFMigrationsHistory 加一筆")]
+    G --> H["git commit<br/>Entity + Migrations"]
+    H -. "下一次需求變更" .-> A
+```
+
+### 1.7 名詞對照
 
 | 觀念 | 角色 | 對應資料庫 |
 |------|------|-----------|
