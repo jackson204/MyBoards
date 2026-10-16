@@ -1,4 +1,4 @@
-# EF Core 入門：ORM 原理與連接資料庫
+# EF Core 入門：從一個需求推到資料庫
 
 - 標籤：#ef-core #orm #database #sql-server #migration #code-first
 - 最後更新：2026-10-17
@@ -16,7 +16,53 @@
 
 ---
 
-## 1. 為什麼要有 class
+## 0. 故事的開始
+
+任務：做一個**部落格平台後端 API**（開部落格、發文章、加標籤）。條件：**今天發的文章，後天還要在。**
+這句話引出一連串問題，本文照這個順序推理：
+
+```
+要保存文章
+  → ❶ 資料存哪裡？            → 資料庫
+  → ❷ .NET 怎麼跟資料庫溝通？  → 驅動程式 + 連線字串，送 SQL、收表格
+  → ❸ 收回的表格怎麼用？       → 定義 class 承接
+  → ❹ 每次手寫 SQL / 轉換太累  → 交給 ORM（EF Core）
+  → ❺ EF Core 內部怎麼運作？
+  → ❻ 實際做一次：需求 → 分析 → 實作 → 驗收
+```
+
+## 1. 資料要存在哪裡？
+
+| 需要的能力 | 記憶體變數（`List<Post>`） | JSON 檔案 | 關聯式資料庫 |
+|-----------|--------------------------|-----------|-------------|
+| 重啟後資料還在 | ✗ | ✓ | ✓ |
+| 多人同時寫入 | ✗ | ✗ 互相覆蓋 | ✓ 鎖定 |
+| 大量資料快速查詢 | — | ✗ 全讀進來比對 | ✓ 索引 |
+| 寫到一半失敗不壞 | — | ✗ | ✓ 交易 |
+| 保證資料關係正確 | ✗ | ✗ | ✓ 外鍵 |
+
+結論：交給資料庫。資料以**資料表**存放：一列（row）一筆資料，一欄（column）一個欄位。
+
+## 2. .NET 程式和資料庫是什麼關係？
+
+兩個**獨立的程式**，透過網路對話：
+
+```
+[你的 .NET 程式] ── 驅動程式 Microsoft.Data.SqlClient ──①SQL 文字──▶ [SQL Server 引擎] ── 資料檔
+                    （依連線字串找到資料庫）          ◀──②表格資料──
+```
+
+| 要素 | 說明 |
+|------|------|
+| 連線字串 | 資料庫位置、名稱、登入方式 |
+| 驅動程式（ADO.NET Provider） | 開連線、送 SQL、收結果；SQL Server 用 `Microsoft.Data.SqlClient` |
+| SQL | 資料庫唯一聽得懂的語言 |
+
+最原始寫法 **ADO.NET**：`SqlConnection` 開連線 → `SqlCommand` 送 SQL（參數化）→ `SqlDataReader` 一列一列、用欄位名字串讀值並自己轉型。
+
+**記住**：EF Core 底層也是 ADO.NET，永遠是「送 SQL 文字、收表格資料」。
+
+## 3. 收回來的表格怎麼用？→ 需要 class
 
 程式和資料庫是兩個不同的世界（Object-Relational Impedance Mismatch）：
 
@@ -51,7 +97,7 @@ class 的目的：
 
 對應資料表的 class 稱為 **Entity**，不需繼承任何 EF 類別，也叫 **POCO**。
 
-## 2. 為什麼要用 ORM
+## 4. 每次手寫 SQL 和轉換太累 → 需要 ORM
 
 ORM（Object-Relational Mapper）就是兩個世界的翻譯層。
 
@@ -81,7 +127,7 @@ ORM 的代價：
 - 還是要懂 SQL：Log 設定 `"Microsoft.EntityFrameworkCore.Database.Command": "Information"` 可看實際 SQL
 - 可混用：`FromSqlInterpolated` 執行自寫 SQL，或搭配 Dapper
 
-## 3. EF Core 的組成
+## 5. EF Core 的組成
 
 ```
 API Endpoint ──DI 注入──▶ DbContext (DbSet<Blog>, DbSet<Post>)
@@ -105,7 +151,7 @@ API Endpoint ──DI 注入──▶ DbContext (DbSet<Blog>, DbSet<Post>)
 | 連線字串 | 資料庫位置、登入方式 | 連線資訊 |
 | Migration | 比對 class 變化產生建表 / 改表程式碼 | Schema 版本 |
 
-## 4. class 如何對應資料表
+## 6. class 如何對應資料表
 
 | C# 端 | 資料庫端 |
 |-------|---------|
@@ -118,7 +164,7 @@ API Endpoint ──DI 注入──▶ DbContext (DbSet<Blog>, DbSet<Post>)
 - **多對多**：兩邊各放 `List`，EF Core 5+ 自動建中間表
 - **主鍵慣例**：`Id` 或 `<類別名>Id`；`int` 主鍵自動遞增
 
-## 5. 查詢的背後
+## 7. 查詢的背後
 
 1. Request 進來，DI 建立本次 request 專用的 DbContext（Scoped）
 2. `db.Blogs.Where(...)` 組成 LINQ 運算式樹（**此時還沒查資料庫**）
@@ -129,7 +175,7 @@ API Endpoint ──DI 注入──▶ DbContext (DbSet<Blog>, DbSet<Post>)
 
 **延遲執行**：`Where`、`OrderBy` 只是組查詢；`ToListAsync`、`FirstAsync`、`CountAsync` 才真正送出 SQL。
 
-## 6. 寫入的背後
+## 8. 寫入的背後
 
 1. `db.Blogs.Add(blog)` → 標記為 `Added`（還沒寫入）
 2. 查出的 `post` → `Unchanged`，並保存原始值
@@ -145,7 +191,7 @@ API Endpoint ──DI 注入──▶ DbContext (DbSet<Blog>, DbSet<Post>)
 | `Deleted` | `Remove()` | `DELETE` |
 | `Detached` | 未被追蹤 | 不做事 |
 
-## 7. Code First 開發流程
+## 9. Code First 開發流程
 
 ```
 改 Entity / OnModelCreating
@@ -160,9 +206,9 @@ API Endpoint ──DI 注入──▶ DbContext (DbSet<Blog>, DbSet<Post>)
 
 ---
 
-## 情境演練：從需求到實作
+## 10–11. 情境演練：需求單與分析
 
-> 完整版（含分析圖、API 程式碼、時序圖、驗收表）見 [ef-core-basics.html](ef-core-basics.html) 第 8–11 節。
+> 完整版（含分析圖、API 程式碼、時序圖、驗收表）見 [ef-core-basics.html](ef-core-basics.html) 第 10–13 節。
 
 **需求：小型部落格平台 API**
 
@@ -195,9 +241,9 @@ API Endpoint ──DI 注入──▶ DbContext (DbSet<Blog>, DbSet<Post>)
 
 ---
 
-## 8. 從零連接資料庫
+## 12. 實作：從零連接資料庫
 
-### 8.1 安裝套件與工具
+### 12.1 安裝套件與工具
 
 ```bash
 dotnet add package Microsoft.EntityFrameworkCore.SqlServer --version 6.0.*
@@ -205,7 +251,7 @@ dotnet add package Microsoft.EntityFrameworkCore.Design --version 6.0.*
 dotnet tool install --global dotnet-ef --version 6.*
 ```
 
-### 8.2 準備資料庫
+### 12.2 準備資料庫
 
 | 選項 | 連線字串 |
 |------|---------|
@@ -215,7 +261,7 @@ dotnet tool install --global dotnet-ef --version 6.*
 
 確認 LocalDB：`sqllocaldb info`
 
-### 8.3 Entity
+### 12.3 Entity
 
 ```csharp
 public class Blog
@@ -244,7 +290,7 @@ public class Tag
 }
 ```
 
-### 8.4 DbContext
+### 12.4 DbContext
 
 ```csharp
 using Microsoft.EntityFrameworkCore;
@@ -276,7 +322,7 @@ public class BloggingContext : DbContext
 
 建構子接收 `options`：連線字串與資料庫種類由 DI 註冊時決定，測試時可替換。
 
-### 8.5 連線字串與註冊
+### 12.5 連線字串與註冊
 
 ```json
 {
@@ -295,7 +341,7 @@ builder.Services.AddDbContext<BloggingContext>(options =>
 - 含密碼的連線字串用 User Secrets，不要 commit
 - `AddDbContext` 預設 **Scoped**；DbContext 非 thread-safe，不可 Singleton
 
-### 8.6 Migration
+### 12.6 Migration
 
 ```bash
 dotnet ef migrations add InitialCreate
@@ -304,7 +350,7 @@ dotnet ef database update
 
 產生 `<時間戳>_InitialCreate.cs`（Up/Down）、`.Designer.cs`、`BloggingContextModelSnapshot.cs`，都要 commit。
 
-### 8.7 在 API 中使用
+### 12.7 在 API 中使用
 
 ```csharp
 app.MapGet("/blogs", async (BloggingContext db) =>
@@ -318,7 +364,7 @@ app.MapPost("/blogs", async (BloggingContext db, Blog blog) =>
 });
 ```
 
-## 9. 慣例與 Fluent API
+## 14. 慣例與 Fluent API
 
 | 慣例 | 效果 |
 |------|------|
@@ -342,7 +388,7 @@ Data Annotations（`[Required]`、`[MaxLength]`）寫在 class 上；Fluent API 
 | `HasOne/HasMany/WithOne/WithMany` | 關聯 |
 | `OnDelete(DeleteBehavior.X)` | 刪除行為 |
 
-## 10. Migration 指令
+## 15. Migration 指令
 
 | 指令 | 用途 |
 |------|------|
@@ -356,7 +402,7 @@ Data Annotations（`[Required]`、`[MaxLength]`）寫在 class 上；Fluent API 
 
 套用前檢查 `Up()`：`DropColumn` / `DropTable` 會失去資料；屬性改名可能被誤判成刪除再新增，要改成 `RenameColumn`。
 
-## 11. 常見錯誤
+## 16. 常見錯誤
 
 | 錯誤訊息 | 原因 | 解法 |
 |---------|------|------|
