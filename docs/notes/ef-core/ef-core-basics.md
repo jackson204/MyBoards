@@ -58,6 +58,23 @@
 | 驅動程式（ADO.NET Provider） | 開連線、送 SQL、收結果；SQL Server 用 `Microsoft.Data.SqlClient` |
 | SQL | 資料庫唯一聽得懂的語言 |
 
+**「收回表格」是什麼意思？** 資料庫不認識你的 C# class，執行 `SELECT` 後回傳的是一張**結果集（Result Set）**：
+
+```
+SELECT PostId, Title, PublishedOn FROM Posts WHERE BlogId = 1
+
+ PostId (int) | Title (nvarchar) | PublishedOn (datetime2)
+--------------+------------------+------------------------
+ 1            | EF Core 入門     | 2026-10-01 09:00        ◀ reader 目前指著這列
+ 2            | LINQ 小技巧      | 2026-10-05 14:30
+ 3            | 草稿             | NULL
+```
+
+- 欄 = SELECT 的欄位（帶資料庫型別），列 = 每筆符合的資料，沒值是 `NULL`（在 SSMS / Rider 執行 SQL 時下方那張表就是它）
+- `SqlDataReader` 像游標：`Read()` 移到下一列，`reader["Title"]` 取目前列的某格，型別是 `object` 要自己轉
+- `NULL` 讀出來是 `DBNull.Value`，不是 C# 的 `null`
+- `INSERT` / `UPDATE` / `DELETE` 不回表格，只回「影響幾列」（`ExecuteNonQuery`）
+
 最原始寫法 **ADO.NET**：`SqlConnection` 開連線 → `SqlCommand` 送 SQL（參數化）→ `SqlDataReader` 一列一列、用欄位名字串讀值並自己轉型。
 
 **記住**：EF Core 底層也是 ADO.NET，永遠是「送 SQL 文字、收表格資料」。
