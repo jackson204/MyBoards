@@ -103,10 +103,6 @@
   .callout.warn > strong:first-child { color: var(--warn); }
   .callout p { margin: 4px 0; }
 
-  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 24px 0 8px; }
-  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
-  .card .k { font-size: 12.5px; font-weight: 700; color: var(--accent); letter-spacing: .04em; }
-  .card .v { margin-top: 4px; font-size: 14.5px; }
 
   .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .compare > div { min-width: 0; }
@@ -156,11 +152,30 @@
   table.rs td.null { color: var(--fg-muted); font-style: italic; }
   table.rs tr.cur td { background: var(--accent-soft); font-weight: 600; }
 
+  .part { margin: 88px 0 0; padding: 22px 24px; border-radius: 14px; background: var(--accent-soft); border: 1px solid var(--border); }
+  .part-no { font: 700 12.5px "Cascadia Code", Consolas, monospace; letter-spacing: .14em; color: var(--accent); }
+  .part-title { font-size: 1.7em; font-weight: 800; line-height: 1.3; margin: 2px 0 6px; }
+  .part > p { margin: 0; color: var(--fg-muted); }
+  .part + section h2 { margin-top: 32px; }
+  .recap { margin-top: 16px; padding: 12px 16px; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border); }
+  .recap-head { font-size: 13px; font-weight: 700; color: var(--accent); }
+  .recap ol { margin: 6px 0 0; padding-left: 22px; }
+  h3 .sub { display: inline-block; min-width: 2.6em; margin-right: 6px; color: var(--accent); font-family: "Cascadia Code", Consolas, monospace; font-size: .85em; }
+  .tag.neutral { background: var(--bg-soft); color: var(--fg-muted); }
+  .tag.accent { background: var(--accent-soft); color: var(--accent); }
+  .table-wrap.flush { margin: 0; }
+  table.narrow { max-width: 560px; }
+  th.center { text-align: center; }
+  .req-story.last { margin-bottom: 14px; }
+  nav.toc summary { display: none; }
+
   footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--fg-muted); }
 
   @media (max-width: 900px) {
     .layout { display: block; }
-    nav.toc { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--border); padding: 16px; }
+    nav.toc { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--border); padding: 12px 16px; }
+    nav.toc summary { display: block; cursor: pointer; font-weight: 700; padding: 6px 8px; }
+    .part { margin-top: 64px; padding: 18px 16px; }
     main { padding: 0 16px 64px; }
     header.hero { padding-top: 28px; }
     .compare { grid-template-columns: 1fr; }
@@ -171,36 +186,39 @@
 <body>
 <div class="layout">
 <nav class="toc" aria-label="目錄">
-  <div class="label">從需求推到 ORM</div>
+<details id="toc-box" open>
+  <summary>目錄</summary>
+  <div class="label">PART 1　從需求推到 ORM</div>
   <ol>
-    <li><a href="#story">0 故事的開始</a></li>
-    <li><a href="#where">1 資料要存在哪裡？</a></li>
-    <li><a href="#connection">2 .NET 與資料庫的關係</a></li>
-    <li><a href="#why-class">3 為什麼需要 class</a></li>
-    <li><a href="#why-orm">4 為什麼需要 ORM</a></li>
+    <li><a href="#story">0　故事的開始</a></li>
+    <li><a href="#where">1　資料要存在哪裡？</a></li>
+    <li><a href="#connection">2　.NET 與資料庫的關係</a></li>
+    <li><a href="#why-class">3　為什麼需要 class</a></li>
+    <li><a href="#why-orm">4　為什麼需要 ORM</a></li>
   </ol>
-  <div class="label">EF Core 怎麼運作</div>
+  <div class="label">PART 2　EF Core 怎麼運作</div>
   <ol>
-    <li><a href="#architecture">5 EF Core 的組成</a></li>
-    <li><a href="#mapping">6 class 如何對應資料表</a></li>
-    <li><a href="#query">7 查詢的背後</a></li>
-    <li><a href="#save">8 寫入的背後</a></li>
-    <li><a href="#workflow">9 Code First 開發流程</a></li>
+    <li><a href="#architecture">5　EF Core 的組成</a></li>
+    <li><a href="#mapping">6　class 如何對應資料表</a></li>
+    <li><a href="#query">7　查詢的背後</a></li>
+    <li><a href="#save">8　寫入的背後</a></li>
+    <li><a href="#workflow">9　Code First 開發流程</a></li>
   </ol>
-  <div class="label">動手做一次</div>
+  <div class="label">PART 3　動手做一次</div>
   <ol>
-    <li><a href="#scenario">10 需求單</a></li>
-    <li><a href="#analysis">11 需求分析</a></li>
-    <li><a href="#tutorial">12 實作</a></li>
-    <li><a href="#acceptance">13 驗收</a></li>
+    <li><a href="#scenario">10　需求單</a></li>
+    <li><a href="#analysis">11　需求分析</a></li>
+    <li><a href="#tutorial">12　實作</a></li>
+    <li><a href="#acceptance">13　驗收</a></li>
   </ol>
-  <div class="label">速查</div>
+  <div class="label">PART 4　速查</div>
   <ol>
-    <li><a href="#config">14 慣例與 Fluent API</a></li>
-    <li><a href="#migration-cmd">15 Migration 指令</a></li>
-    <li><a href="#errors">16 常見錯誤</a></li>
-    <li><a href="#refs">17 參考資料</a></li>
+    <li><a href="#config">14　慣例與 Fluent API</a></li>
+    <li><a href="#migration-cmd">15　Migration 指令</a></li>
+    <li><a href="#errors">16　常見錯誤</a></li>
+    <li><a href="#refs">17　參考資料</a></li>
   </ol>
+</details>
 </nav>
 
 <main>
@@ -213,12 +231,18 @@
   </div>
 </header>
 
+<div class="part">
+  <div class="part-no">PART 1</div>
+  <div class="part-title">從需求推到 ORM</div>
+  <p>為什麼要用資料庫、.NET 怎麼跟資料庫溝通，以及 class 和 ORM 各自解決了什麼問題。</p>
+</div>
+
 <section id="story">
   <h2><span class="num">0</span>故事的開始</h2>
 
   <div class="req">
     <div class="req-head">你接到一個任務</div>
-    <p class="req-story" style="margin-bottom:14px">做一個<b>部落格平台的後端 API</b>：使用者可以開部落格、發文章、幫文章加標籤，讀者可以瀏覽文章。<br>
+    <p class="req-story last">做一個<b>部落格平台的後端 API</b>：使用者可以開部落格、發文章、幫文章加標籤，讀者可以瀏覽文章。<br>
     明天主管會打開網站發一篇文章，<b>後天再打開，那篇文章必須還在。</b></p>
   </div>
 
@@ -243,14 +267,14 @@ flowchart TB
   <h2><span class="num">1</span>資料要存在哪裡？</h2>
   <p class="lead">先試最直覺的做法，看看哪裡不夠用。</p>
 
-  <h3>嘗試一：放在程式的變數裡</h3>
+  <h3><span class="sub">1.1</span>嘗試一：放在程式的變數裡</h3>
 <pre><code class="language-csharp">var posts = new List&lt;Post&gt;();
 
 app.MapPost("/posts", (Post post) =&gt; { posts.Add(post); return Results.Ok(); });
 app.MapGet("/posts", () =&gt; posts);</code></pre>
   <p>可以運作，但 <code>posts</code> 存在<b>記憶體</b>裡。程式一重啟（重新部署、伺服器重開機、當機），文章就全部消失。不符合「後天還要在」。</p>
 
-  <h3>嘗試二：存成檔案</h3>
+  <h3><span class="sub">1.2</span>嘗試二：存成檔案</h3>
   <p>每次發文就把整個清單寫進 <code>posts.json</code>。重啟後資料還在，但很快會遇到新問題：</p>
   <ul>
     <li><b>同時寫入</b>：兩個人同時發文，後寫的覆蓋先寫的，有一篇不見了。</li>
@@ -259,7 +283,7 @@ app.MapGet("/posts", () =&gt; posts);</code></pre>
     <li><b>資料之間的關係</b>：文章屬於哪個部落格、標籤被哪些文章使用，要自己維護、自己保證一致。</li>
   </ul>
 
-  <h3>結論：交給資料庫</h3>
+  <h3><span class="sub">1.3</span>結論：交給資料庫</h3>
   <p>上面這些問題（保存、同時存取、快速查詢、不會寫一半、維護關係）正是<b>資料庫</b>專門解決的事。</p>
   <div class="table-wrap"><table>
     <thead><tr><th>需要的能力</th><th>記憶體變數</th><th>JSON 檔案</th><th>關聯式資料庫</th></tr></thead>
@@ -272,8 +296,8 @@ app.MapGet("/posts", () =&gt; posts);</code></pre>
     </tbody>
   </table></div>
   <p>關聯式資料庫用<b>資料表（Table）</b>存資料，長得像試算表：每一列（row）是一筆資料，每一欄（column）是一個欄位。</p>
-  <div class="table-wrap"><table style="max-width:560px">
-    <thead><tr><th colspan="4" style="text-align:center">資料表 Posts</th></tr>
+  <div class="table-wrap"><table class="narrow">
+    <thead><tr><th colspan="4" class="center">資料表 Posts</th></tr>
       <tr><th>PostId</th><th>Title</th><th>Content</th><th>BlogId</th></tr></thead>
     <tbody>
       <tr><td>1</td><td>EF Core 入門</td><td>今天來介紹…</td><td>1</td></tr>
@@ -305,7 +329,8 @@ flowchart LR
     <figcaption>圖 2-1　.NET 與資料庫：兩個程式透過網路，用 SQL 對話</figcaption>
   </figure>
 
-  <p>重點只有三個：</p>
+  <h3><span class="sub">2.1</span>兩個獨立的程式</h3>
+  <p>.NET 程式要跟資料庫說話，需要三樣東西：</p>
   <div class="table-wrap"><table>
     <thead><tr><th>要素</th><th>說明</th><th>比喻</th></tr></thead>
     <tbody>
@@ -315,7 +340,7 @@ flowchart LR
     </tbody>
   </table></div>
 
-  <h3>「收回表格」是什麼意思？</h3>
+  <h3><span class="sub">2.2</span>它們交換什麼：送出 SQL，收回結果表</h3>
   <p>程式和資料庫之間，來回交換的其實只有兩種東西：<b>程式送出去的 SQL 文字</b>，以及<b>資料庫送回來的查詢結果</b>。這份查詢結果的正式名稱叫<b>結果集（Result Set）</b>，下面拆成三步說明。</p>
   <ol>
     <li><b>送出</b>：程式把一段 SQL 文字交給驅動程式，例如「給我部落格 1 的所有文章的編號、標題、發布時間」。</li>
@@ -341,7 +366,7 @@ WHERE BlogId = 1</code></pre>
       <div class="f3-arrow" aria-hidden="true">↓</div>
       <div class="f3-step">
         <div class="f3-label">② 收回：結果集（表格）</div>
-        <div class="table-wrap" style="margin:0"><table class="rs">
+        <div class="table-wrap flush"><table class="rs">
           <thead>
             <tr><th>PostId<small>int</small></th><th>Title<small>nvarchar</small></th><th>PublishedOn<small>datetime2</small></th></tr>
           </thead>
@@ -383,9 +408,40 @@ WHERE BlogId = 1</code></pre>
     <p><code>SELECT</code> 回傳結果集。<code>INSERT</code>、<code>UPDATE</code>、<code>DELETE</code> 只回傳一個數字：<b>影響了幾列</b>。所以 ADO.NET 有兩種執行方法：讀表格用 <code>ExecuteReader</code>，只要筆數用 <code>ExecuteNonQuery</code>。</p>
   </div>
 
-  <p>簡單說，「送 SQL、收表格」就是：<b>程式送出一段 SQL 文字，拿回一張結果表，再一列一列、一格一格把值讀出來。</b>下面用 ADO.NET 實際寫一次。</p>
+  <p>簡單說，「送 SQL、收表格」就是：<b>程式送出一段 SQL 文字，拿回一張結果表，再一列一列、一格一格把值讀出來。</b></p>
 
-  <h3>最原始的寫法：ADO.NET</h3>
+  <h3><span class="sub">2.3</span>拿回來的是「複本」</h3>
+  <p>查詢（<code>SELECT</code>）其實就是<b>把資料庫裡存的資料拿回來</b>。不過「拿回來」有三個細節，後面學 EF Core 時都會用到：</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>細節</th><th>說明</th><th>例子</th></tr></thead>
+    <tbody>
+      <tr><td><strong>只拿你要的部分</strong></td><td>SQL 就是用來描述「要哪些列、哪些欄」的語言，資料庫只回傳符合的部分</td><td>資料庫有上萬篇文章、十幾個欄位，<code>WHERE BlogId = 1</code> 只拿回部落格 1 的文章，而且只有 SELECT 列出的欄位</td></tr>
+      <tr><td><strong>拿到的是複本</strong></td><td>結果表是查詢那一刻的拷貝，放在程式的記憶體裡。改了程式裡的值，資料庫<b>不會</b>跟著變</td><td>讀出標題後在程式裡改成「新標題」，資料庫裡還是舊標題，必須另外送 <code>UPDATE</code></td></tr>
+      <tr><td><strong>不一定原本就存著</strong></td><td>結果也可以是資料庫當場算出來的</td><td><code>SELECT COUNT(*) FROM Posts</code> 拿回的「文章總數」不存在任何一格裡</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="diagram"><script type="text/x-mermaid">
+flowchart TB
+    T[("資料庫（正本）<br/>Posts 資料表：所有文章、所有欄位")]
+    C["程式記憶體裡的結果表（複本）<br/>只有部落格 1 的文章、只有 SELECT 的欄位"]
+    E["在程式裡改值：title = 新標題<br/>只改到複本"]
+    T -- "① SELECT：複製需要的部分" --> C
+    C --> E
+    E -. "② 資料庫不知道，要再送 UPDATE 才會改到" .-> T
+    </script></div>
+    <figcaption>圖 2-3　查詢拿回的是複本：改複本不會改到資料庫</figcaption>
+  </figure>
+
+  <div class="callout tip">
+    <strong>先記住這個伏筆</strong>
+    <p>「改了複本，要自己送 UPDATE 回去」很麻煩，你還得記住改過哪些欄位。EF Core 的 <b>Change Tracker</b> 就是專門處理這件事的：它記住拿回來時的原始值，呼叫 <code>SaveChanges()</code> 時比對差異，自動組出 <code>UPDATE</code> 送回資料庫（第 8 節）。</p>
+  </div>
+
+  <p>一句話總結：<b>程式用 SQL 告訴資料庫「我要哪些資料」，資料庫把那部分複製一份、排成表格送回來。</b>下面用 ADO.NET 實際寫一次。</p>
+
+  <h3><span class="sub">2.4</span>用 ADO.NET 實際寫一次</h3>
   <p>.NET 內建的這套資料存取 API 叫 <b>ADO.NET</b>。把文章存進去、再讀出來：</p>
 <pre><code class="language-csharp">using Microsoft.Data.SqlClient;
 
@@ -432,7 +488,7 @@ sequenceDiagram
     Code->>Drv: Dispose
     Drv-->>DB: 連線歸還連線池
     </script></div>
-    <figcaption>圖 2-3　ADO.NET 讀取資料的過程</figcaption>
+    <figcaption>圖 2-4　ADO.NET 讀取資料的過程</figcaption>
   </figure>
 
   <div class="callout">
@@ -444,10 +500,10 @@ sequenceDiagram
 </section>
 
 <section id="why-class">
-  <h2><span class="num">3</span>收回來的表格，程式要怎麼用？→ 需要 class</h2>
+  <h2><span class="num">3</span>收回來的結果表，程式要怎麼用？→ 需要 class</h2>
   <p class="lead">上一節的程式能動，但仔細看，寫起來到處是坑。</p>
 
-  <h3>直接用欄位值的問題</h3>
+  <h3><span class="sub">3.1</span>直接用欄位值的問題</h3>
   <div class="table-wrap"><table>
     <thead><tr><th>問題</th><th>例子</th><th>後果</th></tr></thead>
     <tbody>
@@ -458,11 +514,11 @@ sequenceDiagram
     </tbody>
   </table></div>
 
-  <h3>解法：先定義「一篇文章長什麼樣子」</h3>
+  <h3><span class="sub">3.2</span>解法：先定義「一篇文章長什麼樣子」</h3>
   <p>用 class 描述資料的形狀，資料表的<b>一列</b>就對應到一個<b>物件</b>：</p>
   <div class="compare">
     <div>
-      <span class="tag" style="background:var(--bg-soft);color:var(--fg-muted)">資料庫：資料表 Posts</span>
+      <span class="tag neutral">資料庫：資料表 Posts</span>
 <pre><code class="language-sql">CREATE TABLE Posts (
     PostId   int IDENTITY PRIMARY KEY,
     Title    nvarchar(200) NOT NULL,
@@ -471,7 +527,7 @@ sequenceDiagram
 );</code></pre>
     </div>
     <div>
-      <span class="tag" style="background:var(--accent-soft);color:var(--accent)">C#：class Post</span>
+      <span class="tag accent">C#：class Post</span>
 <pre><code class="language-csharp">public class Post
 {
     public int PostId { get; set; }
@@ -495,7 +551,7 @@ while (await reader.ReadAsync())
 }
 return posts;                                // 可以直接回傳、序列化成 JSON</code></pre>
 
-  <h3>class 的目的</h3>
+  <h3><span class="sub">3.3</span>class 的目的</h3>
   <div class="table-wrap"><table>
     <thead><tr><th>目的</th><th>說明</th></tr></thead>
     <tbody>
@@ -517,7 +573,7 @@ return posts;                                // 可以直接回傳、序列化�
   <h2><span class="num">4</span>每次都手寫 SQL 和轉換，太累了 → 需要 ORM</h2>
   <p class="lead">把目前「ADO.NET + class」的做法套到整個部落格平台，看看還剩下多少重複的苦工。</p>
 
-  <h3>還沒解決的苦工</h3>
+  <h3><span class="sub">4.1</span>還沒解決的苦工</h3>
   <div class="table-wrap"><table>
     <thead><tr><th>情境</th><th>ADO.NET + class 要做的事</th></tr></thead>
     <tbody>
@@ -551,7 +607,7 @@ flowchart LR
     <figcaption>圖 4-1　ORM 是物件世界與關聯世界之間的翻譯層</figcaption>
   </figure>
 
-  <h3>同一件事，有沒有 ORM 的差別</h3>
+  <h3><span class="sub">4.2</span>同一件事，有沒有 ORM 的差別</h3>
   <div class="compare">
     <div class="bad">
       <span class="tag">ADO.NET + class</span>
@@ -594,7 +650,7 @@ await db.SaveChangesAsync();</code></pre>
     </tbody>
   </table></div>
 
-  <h3>.NET 常見的三種選擇</h3>
+  <h3><span class="sub">4.3</span>.NET 常見的三種選擇</h3>
   <div class="table-wrap"><table>
     <thead><tr><th></th><th>ADO.NET</th><th>Dapper（Micro-ORM）</th><th>EF Core（完整 ORM）</th></tr></thead>
     <tbody>
@@ -618,6 +674,21 @@ await db.SaveChangesAsync();</code></pre>
 
   <div class="bridge"><b>下一個問題</b>決定用 EF Core 了。它內部由哪些零件組成？一個查詢、一次存檔，背後到底發生了什麼？</div>
 </section>
+
+<div class="part">
+  <div class="part-no">PART 2</div>
+  <div class="part-title">EF Core 怎麼運作</div>
+  <p>把 EF Core 拆開來看：由哪些零件組成、class 怎麼變成資料表、查詢和存檔時背後發生什麼。</p>
+    <div class="recap">
+      <div class="recap-head">PART 1 的結論</div>
+      <ol>
+        <li>資料要長期保存，所以存在<b>資料庫</b>。</li>
+        <li>程式和資料庫是兩個程式：程式<b>送出 SQL 文字</b>，資料庫<b>送回結果表</b>（資料的複本）。</li>
+        <li>用 <b>class</b> 承接結果表的每一列，程式才好用、型別才安全。</li>
+        <li>手寫 SQL 和轉換太繁瑣，交給 <b>ORM</b> 依 class 自動翻譯，.NET 官方的 ORM 就是 <b>EF Core</b>。</li>
+      </ol>
+    </div>
+</div>
 
 <section id="architecture">
   <h2><span class="num">5</span>EF Core 的組成</h2>
@@ -659,11 +730,12 @@ flowchart TB
       <tr><td><strong>Migration</strong></td><td>比對 class 的變化，產生建表 / 改表的程式碼</td><td>Schema 版本</td></tr>
     </tbody>
   </table></div>
+  <div class="bridge"><b>下一個問題</b>EF Core 怎麼知道一個 class 要變成什麼樣的資料表？</div>
 </section>
 
 <section id="mapping">
   <h2><span class="num">6</span>class 如何對應資料表</h2>
-  <p class="lead">以官方範例 <code>Blog</code>、<code>Post</code>、<code>Tag</code> 為例，看 C# 這端和資料庫那端各長什麼樣子。</p>
+  <p class="lead">第 3 節是先有資料表、再手寫 class 去對應。EF Core 反過來：<b>依照 class 推導出資料表</b>。以 <code>Blog</code>、<code>Post</code>、<code>Tag</code> 為例，看兩端各長什麼樣子。</p>
 
   <figure>
     <div class="diagram"><script type="text/x-mermaid">
@@ -729,11 +801,12 @@ erDiagram
     <p><b>多對多會多一張中間表</b>：C# 兩邊各放一個 <code>List</code>，EF Core 5 以上會自動建立 <code>PostTag</code>。</p>
     <p><b>主鍵慣例</b>：名為 <code>Id</code> 或 <code>&lt;類別名&gt;Id</code> 的屬性會自動成為主鍵，<code>int</code> 主鍵預設為自動遞增。</p>
   </div>
+  <div class="bridge"><b>下一個問題</b>查詢的時候，LINQ 怎麼變成 SQL？拿回來的結果表又怎麼變回物件？</div>
 </section>
 
 <section id="query">
   <h2><span class="num">7</span>一次查詢在背後發生什麼</h2>
-  <p class="lead">以 <code>GET /blogs</code> 查出網址含 "dotnet" 的部落格為例。</p>
+  <p class="lead">這其實就是第 2 節的「送 SQL、收結果表」加上第 3 節的「一列裝進一個物件」，只是 EF Core 全部自動做完。以 <code>GET /blogs</code> 查出網址含 "dotnet" 的部落格為例。</p>
 
   <figure>
     <div class="diagram"><script type="text/x-mermaid">
@@ -766,11 +839,12 @@ sequenceDiagram
     <strong>延遲執行（Deferred Execution）</strong>
     <p><code>Where</code>、<code>OrderBy</code> 只是在組裝查詢，不會連資料庫；直到 <code>ToListAsync()</code>、<code>FirstAsync()</code>、<code>CountAsync()</code> 等「取值」方法才真正送出 SQL。</p>
   </div>
+  <div class="bridge"><b>下一個問題</b>拿回來的物件改了之後，要怎麼存回資料庫？</div>
 </section>
 
 <section id="save">
   <h2><span class="num">8</span>一次寫入在背後發生什麼</h2>
-  <p class="lead">DbContext 會記住你對物件做了什麼（Change Tracking），呼叫 <code>SaveChanges</code> 時才一次寫入。</p>
+  <p class="lead">第 2 節說過：拿回來的是複本，改了複本，資料庫不會變。DbContext 的 <b>Change Tracker</b> 會記住每個物件的原始值，呼叫 <code>SaveChanges</code> 時比對差異，自動送出對應的 SQL。</p>
 
   <figure>
     <div class="diagram"><script type="text/x-mermaid">
@@ -810,6 +884,7 @@ sequenceDiagram
       <tr><td><code>Detached</code></td><td>不受 DbContext 追蹤</td><td>不做事</td></tr>
     </tbody>
   </table></div>
+  <div class="bridge"><b>下一個問題</b>需求會變，class 也會跟著改，資料庫的結構要怎麼一起更新？</div>
 </section>
 
 <section id="workflow">
@@ -839,10 +914,14 @@ flowchart TB
   <div class="bridge"><b>下一步</b>原理到這裡告一段落。回到第 0 節的任務，實際把部落格平台做出來。</div>
 </section>
 
-<!-- ============================== 實作 ============================== -->
+<div class="part">
+  <div class="part-no">PART 3</div>
+  <div class="part-title">動手做一次</div>
+  <p>回到第 0 節的任務：把它寫成需求單，分析出模型，實作後逐條驗收。</p>
+</div>
 
 <section id="scenario">
-  <h2><span class="num">10</span>情境：一份需求</h2>
+  <h2><span class="num">10</span>需求單：把任務寫清楚</h2>
   <p class="lead">原理都懂了，回到第 0 節的任務。動手前先把「做一個部落格平台」寫成明確的需求單，接著走一次 <b>需求 → 分析 → 實作 → 驗收</b>。</p>
 
   <div class="req">
@@ -873,7 +952,7 @@ flowchart LR
     <figcaption>圖 11-1　需求分析的四個問題，以及各自對應的實作</figcaption>
   </figure>
 
-  <h3>① 找名詞：哪些是 Entity，哪些只是屬性？</h3>
+  <h3><span class="sub">11.1</span>找名詞：哪些是 Entity，哪些只是屬性？</h3>
   <p>把需求裡的名詞圈出來。判斷原則：<b>它自己有沒有身分（需要被單獨查詢、被多個東西引用）？</b>有的話就是 Entity，沒有的話只是某個 Entity 的屬性。</p>
   <div class="table-wrap"><table>
     <thead><tr><th>名詞</th><th>判斷</th><th>理由</th></tr></thead>
@@ -891,7 +970,7 @@ flowchart LR
     <p>如果寫成 <code>Post.Tags = "csharp,efcore"</code>，就無法保證 R3「名稱不可重複」，R5「依標籤查詢」也只能用 <code>LIKE</code> 模糊比對，又慢又不準。只要需求裡出現「共用」或「依它查詢」，通常就該獨立成 Entity。</p>
   </div>
 
-  <h3>② 找關係：幾對幾？</h3>
+  <h3><span class="sub">11.2</span>找關係：幾對幾？</h3>
   <p>對每一對 Entity 問兩次「一個 A 有幾個 B？一個 B 有幾個 A？」</p>
   <div class="table-wrap"><table>
     <thead><tr><th>關係</th><th>A → B</th><th>B → A</th><th>結論</th><th>實作方式</th></tr></thead>
@@ -926,7 +1005,7 @@ erDiagram
     <figcaption>圖 11-2　分析結果：概念模型（標註來自哪條需求）</figcaption>
   </figure>
 
-  <h3>③ 找規則：每條限制對應哪個設定？</h3>
+  <h3><span class="sub">11.3</span>找規則：每條限制對應哪個設定？</h3>
   <p>把需求中的「必填、最多、不可重複、一併刪除、預設」這類字眼挑出來，逐條翻成 EF Core 設定。</p>
   <div class="table-wrap"><table>
     <thead><tr><th>需求</th><th>規則</th><th>EF Core 設定</th><th>資料庫結果</th></tr></thead>
@@ -943,7 +1022,7 @@ erDiagram
     <p>程式先查再新增（<code>AnyAsync</code> 後 <code>Add</code>）時，兩個請求同時進來還是可能都通過檢查。唯一索引才是最後一道保證。程式端的檢查是為了回傳友善的錯誤訊息。</p>
   </div>
 
-  <h3>④ 找操作：要查什麼、寫什麼？</h3>
+  <h3><span class="sub">11.4</span>找操作：要查什麼、寫什麼？</h3>
   <div class="table-wrap"><table>
     <thead><tr><th>需求</th><th>API</th><th>查詢重點</th></tr></thead>
     <tbody>
@@ -1252,7 +1331,7 @@ sequenceDiagram
     <p>標題超過 200 字時，SQL Server 會拒絕寫入，EF 丟出 <code>DbUpdateException</code>，API 會回 500。正式專案要在進資料庫前先驗證輸入，例如檢查 <code>req.Title.Length</code> 或使用 FluentValidation，然後回 <code>400 Bad Request</code>。資料庫的限制是最後一道防線。</p>
   </div>
 
-  <h3>需求變更時怎麼辦？</h3>
+  <h3><span class="sub">13.1</span>需求變更時怎麼辦？</h3>
   <p>假設之後新增需求「<b>R6：文章要記錄瀏覽次數</b>」，就照第 9 節的循環走一次：</p>
   <ol>
     <li>分析：瀏覽次數是 Post 的屬性，不是新的 Entity → 加 <code>public int ViewCount { get; set; }</code></li>
@@ -1262,11 +1341,17 @@ sequenceDiagram
   </ol>
 </section>
 
+<div class="part">
+  <div class="part-no">PART 4</div>
+  <div class="part-title">速查</div>
+  <p>實作時隨手翻的對照表與指令。</p>
+</div>
+
 <section id="config">
   <h2><span class="num">14</span>設定規則：慣例與 Fluent API</h2>
   <p class="lead">EF Core 先套用「慣例（Convention）」，再用 Data Annotations 或 Fluent API 覆寫。</p>
 
-  <h3>常見慣例</h3>
+  <h3><span class="sub">14.1</span>常見慣例</h3>
   <div class="table-wrap"><table>
     <thead><tr><th>慣例</th><th>效果</th></tr></thead>
     <tbody>
@@ -1278,10 +1363,10 @@ sequenceDiagram
     </tbody>
   </table></div>
 
-  <h3>Data Annotations 與 Fluent API</h3>
+  <h3><span class="sub">14.2</span>Data Annotations 與 Fluent API</h3>
   <div class="compare">
     <div>
-      <span class="tag" style="background:var(--bg-soft);color:var(--fg-muted)">Data Annotations：寫在 class 上</span>
+      <span class="tag neutral">Data Annotations：寫在 class 上</span>
 <pre><code class="language-csharp">public class Blog
 {
     public int BlogId { get; set; }
@@ -1291,7 +1376,7 @@ sequenceDiagram
 }</code></pre>
     </div>
     <div>
-      <span class="tag" style="background:var(--accent-soft);color:var(--accent)">Fluent API：集中在 DbContext</span>
+      <span class="tag accent">Fluent API：集中在 DbContext</span>
 <pre><code class="language-csharp">modelBuilder.Entity&lt;Blog&gt;()
     .Property(b =&gt; b.Url)
     .IsRequired()
@@ -1300,7 +1385,7 @@ sequenceDiagram
   </div>
   <p>兩種方式可以混用，衝突時 <strong>Fluent API 優先</strong>。Fluent API 能設定的東西比較多，例如刪除行為、精度、預設值 SQL，而且 Entity 能保持乾淨，所以設定多的時候建議集中寫在 Fluent API。</p>
 
-  <h3>常用 Fluent API</h3>
+  <h3><span class="sub">14.3</span>常用 Fluent API</h3>
   <div class="table-wrap"><table>
     <thead><tr><th>方法</th><th>效果</th></tr></thead>
     <tbody>
@@ -1378,6 +1463,7 @@ sequenceDiagram
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
 <script>
 (async function () {
+  if (window.matchMedia('(max-width: 900px)').matches) document.getElementById('toc-box').removeAttribute('open');
   if (window.hljs) document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
 
   // 目錄：捲動時標示目前章節
