@@ -216,6 +216,12 @@
   .s-db::before { content: ""; position: absolute; top: -2px; left: -2px; right: -2px; height: 36px; border: 2px solid var(--l-db-b); border-radius: 50%; background: var(--l-db); filter: brightness(.95); }
   .s-db span { position: relative; }
 
+  .s-tag { display: inline-block; margin-bottom: 4px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; border: 1px solid; }
+  .s-tag.yes { color: var(--l-orm-b); border-color: var(--l-orm-b); background: var(--bg-card); }
+  .s-tag.no { color: var(--fg-muted); border-color: var(--border); background: var(--bg-card); }
+  .s-orm { position: relative; border: 3px solid var(--accent); border-radius: 14px; padding: 34px 10px 10px; }
+  .s-orm-label { position: absolute; top: 8px; left: 12px; font-size: 13px; font-weight: 800; color: var(--accent); }
+
   footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--fg-muted); }
 
   @media (max-width: 900px) {
@@ -265,7 +271,8 @@
     <li><a href="#config">14　慣例與 Fluent API</a></li>
     <li><a href="#migration-cmd">15　Migration 指令</a></li>
     <li><a href="#errors">16　常見錯誤</a></li>
-    <li><a href="#refs">17　參考資料</a></li>
+    <li><a href="#minimal-api">17　附錄：Minimal API</a></li>
+    <li><a href="#refs">18　參考資料</a></li>
   </ol>
 </details>
 </nav>
@@ -317,11 +324,29 @@ flowchart TB
   <p class="lead">先試最直覺的做法，看看哪裡不夠用。</p>
 
   <h3><span class="sub">1.1</span>嘗試一：放在程式的變數裡</h3>
-<pre><code class="language-csharp">var posts = new List&lt;Post&gt;();
+  <p>先用最少的程式碼做出「發文」和「看文章」兩支 API。下面是 ASP.NET Core 的 <b>Minimal API</b> 寫法（.NET 6 起，寫在 <code>Program.cs</code>）：</p>
+<pre><code class="language-csharp">var posts = new List&lt;Post&gt;();                 // ① 一個放在記憶體裡的清單
 
-app.MapPost("/posts", (Post post) =&gt; { posts.Add(post); return Results.Ok(); });
-app.MapGet("/posts", () =&gt; posts);</code></pre>
-  <p>可以運作，但 <code>posts</code> 存在<b>記憶體</b>裡。程式一重啟（重新部署、伺服器重開機、當機），文章就全部消失。不符合「後天還要在」。</p>
+app.MapPost("/posts", (Post post) =&gt;           // ② 收到 POST /posts 時執行
+{
+    posts.Add(post);                           //    把前端送來的文章加進清單
+    return Results.Ok();                       //    回應 200 OK
+});
+
+app.MapGet("/posts", () =&gt; posts);             // ③ 收到 GET /posts 時，回傳整個清單（自動轉成 JSON）</code></pre>
+  <div class="table-wrap"><table>
+    <thead><tr><th>程式</th><th>意思</th></tr></thead>
+    <tbody>
+      <tr><td><code>app.MapPost("/posts", …)</code></td><td>註冊一支 API：有人用 <b>POST</b> 方法呼叫網址 <code>/posts</code>（新增資料）時，執行後面的函式</td></tr>
+      <tr><td><code>(Post post) =&gt; { … }</code></td><td>處理這個請求的函式（Lambda）。參數 <code>Post post</code>：ASP.NET Core 自動把請求內容的 JSON <code>{"title": "…", "content": "…"}</code> 轉成 <code>Post</code> 物件傳進來</td></tr>
+      <tr><td><code>app.MapGet("/posts", () =&gt; posts)</code></td><td>有人用 <b>GET</b> 呼叫 <code>/posts</code>（讀取資料）時，回傳 <code>posts</code>，框架自動把它序列化成 JSON</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout">
+    <strong>對 Minimal API 不熟？</strong>
+    <p>只要先抓住一句話：<b><code>app.MapXxx(網址, 函式)</code> ＝「有人呼叫這個網址時，執行這個函式」</b>，Xxx 是 HTTP 方法（Get 讀、Post 新增、Put 修改、Delete 刪除）。本文所有 API 範例都是這個寫法，重點在函式裡面怎麼用 EF Core。更多說明（參數從哪來、怎麼回傳、跟 Controller 寫法對照、怎麼測試）見<a href="#minimal-api">附錄：Minimal API 快速入門</a>。</p>
+  </div>
+  <p>這樣可以運作，但 <code>posts</code> 存在<b>記憶體</b>裡。程式一重啟（重新部署、伺服器重開機、當機），文章就全部消失。不符合「後天還要在」。</p>
 
   <h3><span class="sub">1.2</span>嘗試二：存成檔案</h3>
   <p>每次發文就把整個清單寫進 <code>posts.json</code>。重啟後資料還在，但很快會遇到新問題：</p>
@@ -650,16 +675,16 @@ return posts;                                // 可以直接回傳、序列化�
         <div class="s-layer app"><b>你的程式碼</b><small>LINQ 查詢、操作物件、<br>呼叫 SaveChanges()</small></div>
       <div class="s-link"><span class="s-down">LINQ / 物件的變更</span><span class="s-arrows" aria-hidden="true"><i>↓</i><i>↑</i></span><span class="s-up">物件</span></div>
         <div class="s-abstract">
-          <span class="s-abstract-label">EF Core 幫你做掉（被抽象化）</span>
-          <div class="s-layer orm"><b>ORM 對映</b><small>LINQ → SQL、結果表 → 物件、變更追蹤</small></div>
+          <span class="s-abstract-label">你不用直接碰的部分（被抽象化）</span>
+          <div class="s-layer orm"><span class="s-tag yes">ORM</span><b>EF Core</b><small>LINQ → SQL、結果表 → 物件、變更追蹤</small></div>
       <div class="s-link"><span class="s-down">SQL 文字</span><span class="s-arrows" aria-hidden="true"><i>↓</i><i>↑</i></span><span class="s-up">結果表</span></div>
-          <div class="s-layer ado"><b>ADO.NET</b><small>Microsoft.Data.SqlClient</small></div>
+          <div class="s-layer ado"><span class="s-tag no">不是 ORM</span><b>ADO.NET</b><small>Microsoft.Data.SqlClient，由 EF Core 替你呼叫</small></div>
         </div>
       <div class="s-link"><span class="s-down">SQL 文字</span><span class="s-arrows" aria-hidden="true"><i>↓</i><i>↑</i></span><span class="s-up">結果表</span></div>
       <div class="s-db"><span>資料庫</span></div>
       </div>
     </div>
-    <figcaption>圖 4-1　ORM 插在你的程式和 ADO.NET 之間：原本你自己寫的翻譯工作，被包進虛線框裡</figcaption>
+    <figcaption>圖 4-1　有了 ORM，你只跟 EF Core 打交道。虛線框是「你不用直接碰的部分」，其中只有粉紅色那層是 ORM，ADO.NET 仍是底層驅動</figcaption>
   </figure>
 
   <figure>
@@ -772,10 +797,12 @@ await db.SaveChangesAsync();</code></pre>
 
   <figure>
     <div class="stack wide">
-      <div class="s-layer app"><b>你的 ASP.NET Core 程式</b><small>API Endpoint、Entity class（Blog / Post / Tag）</small></div>
+      <div class="s-layer app"><span class="s-tag no">不是 ORM：使用 ORM 的程式</span><b>你的 ASP.NET Core 程式</b><small>API Endpoint、Entity class（Blog / Post / Tag）</small></div>
       <div class="s-link"><span class="s-down">LINQ 查詢、Add / Remove、SaveChanges()</span><span class="s-arrows" aria-hidden="true"><i>↓</i><i>↑</i></span><span class="s-up">Entity 物件（List&lt;Blog&gt;）</span></div>
+      <div class="s-orm">
+      <span class="s-orm-label">ORM ＝ EF Core（核心 + Provider）</span>
       <div class="s-layer ef">
-        <b>EF Core</b>
+        <b>EF Core 核心</b>
         <div class="s-chips">
           <div class="s-chip"><b>DbContext / DbSet&lt;T&gt;</b><small>入口與工作階段</small></div>
           <div class="s-chip"><b>Model（模型）</b><small>Entity + OnModelCreating<br>描述 class ↔ 資料表的對映</small></div>
@@ -784,13 +811,21 @@ await db.SaveChangesAsync();</code></pre>
           <div class="s-chip"><b>實體化</b><small>結果表的列 → 物件</small></div>
         </div>
       </div>
-      <div class="s-layer prov"><b>Database Provider</b><small>Microsoft.EntityFrameworkCore.SqlServer：產生 SQL Server 的 SQL 方言（T-SQL）</small></div>
-      <div class="s-layer ado"><b>ADO.NET</b><small>Microsoft.Data.SqlClient：依連線字串連線、送出 SQL、讀取結果表</small></div>
+      <div class="s-layer prov"><b>Database Provider</b><small>Microsoft.EntityFrameworkCore.SqlServer：EF Core 的外掛套件，產生 SQL Server 的 SQL 寫法（T-SQL）。換資料庫就是換這一塊</small></div>
+      </div>
+      <div class="s-link"><span class="s-down">SQL 文字</span><span class="s-arrows" aria-hidden="true"><i>↓</i><i>↑</i></span><span class="s-up">結果表</span></div>
+      <div class="s-layer ado"><span class="s-tag no">不是 ORM：底層驅動（第 2 節）</span><b>ADO.NET</b><small>Microsoft.Data.SqlClient：依連線字串連線、送出 SQL、讀取結果表</small></div>
       <div class="s-link"><span class="s-down">SQL 文字（Queries / Updates）</span><span class="s-arrows" aria-hidden="true"><i>↓</i><i>↑</i></span><span class="s-up">結果表 / 影響筆數</span></div>
       <div class="s-db"><span>SQL Server</span></div>
     </div>
-    <figcaption>圖 5-1　EF Core 分層架構：越往下越接近資料庫，最底層仍是第 2 節的 ADO.NET</figcaption>
+    <figcaption>圖 5-1　EF Core 分層架構：紫色實線框內才是 ORM（EF Core 核心 + Provider）；上面是使用它的程式，下面是它呼叫的 ADO.NET</figcaption>
   </figure>
+
+  <div class="callout tip">
+    <strong>整張圖都是 ORM 嗎？不是</strong>
+    <p><b>ORM 只有中間框起來的部分</b>：EF Core 核心負責對映、轉譯、追蹤變更；Provider 是 EF Core 的外掛，負責「某一種資料庫」的 SQL 寫法。</p>
+    <p>最上層是<b>使用</b> ORM 的你的程式；ADO.NET 只會送 SQL、收結果表，不認識你的 class，沒有 EF Core 也能單獨使用（第 2 節就是這樣）。一句話：<b>ORM 夾在你的程式和 ADO.NET 中間做翻譯，最後還是叫 ADO.NET 去跟資料庫說話。</b></p>
+  </div>
 
   <div class="table-wrap"><table>
     <thead><tr><th>角色</th><th>負責什麼</th><th>對應資料庫</th></tr></thead>
@@ -1279,6 +1314,7 @@ dotnet ef database update</code></pre>
 
     <li>
       <h3>實作 API（分析 ④）</h3>
+      <p>以下用 Minimal API 撰寫，看不懂寫法時請先讀<a href="#minimal-api">附錄：Minimal API 快速入門</a>。</p>
       <span class="file">Program.cs（接在 <code>var app = builder.Build();</code> 之後）</span>
 <pre><code class="language-csharp">// R1 建立部落格，網址不可重複
 app.MapPost("/blogs", async (BloggingContext db, CreateBlogRequest req) =&gt;
@@ -1515,8 +1551,102 @@ sequenceDiagram
   </table></div>
 </section>
 
+<section id="minimal-api">
+  <h2><span class="num">17</span>附錄：Minimal API 快速入門</h2>
+  <p class="lead">本文的 API 都用 Minimal API 撰寫。這裡只講看懂範例需要的部分。</p>
+
+  <h3><span class="sub">17.1</span>什麼是 Minimal API</h3>
+  <p>ASP.NET Core 寫 Web API 有兩種風格：</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th></th><th>Minimal API</th><th>Controller</th></tr></thead>
+    <tbody>
+      <tr><th>推出</th><td>.NET 6（2021）</td><td>ASP.NET Core 一開始就有</td></tr>
+      <tr><th>寫在哪</th><td>直接寫在 <code>Program.cs</code></td><td>另外建 <code>Controllers/XxxController.cs</code> 類別</td></tr>
+      <tr><th>樣子</th><td><code>app.MapGet("/posts", …)</code> 一行一支 API</td><td>類別 + 方法 + <code>[HttpGet]</code> 等屬性標註</td></tr>
+      <tr><th>適合</th><td>小型服務、學習、範例</td><td>中大型專案、API 很多需要分類管理</td></tr>
+    </tbody>
+  </table></div>
+  <p>兩者底層相同，能力也幾乎一樣，只是寫法不同。學會一種，另一種很快就看得懂。</p>
+
+  <h3><span class="sub">17.2</span>基本結構：網址 + 函式</h3>
+<pre><code class="language-csharp">app.MapGet("/posts", () =&gt; ...);           // 讀取
+app.MapPost("/posts", (Post post) =&gt; ...); // 新增
+app.MapPut("/posts/{id}", ...);            // 修改
+app.MapDelete("/posts/{id}", ...);         // 刪除</code></pre>
+
+  <h3><span class="sub">17.3</span>函式的參數從哪來？</h3>
+  <p>ASP.NET Core 會依參數的型別和名稱，自動從請求中找到對應的值傳進來（稱為 <b>Model Binding</b>）：</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>參數長這樣</th><th>值從哪來</th><th>例子</th></tr></thead>
+    <tbody>
+      <tr><td><code>int id</code>，且網址有 <code>{id}</code></td><td>網址路徑</td><td><code>GET /posts/5</code> → <code>id = 5</code></td></tr>
+      <tr><td><code>int page</code>，網址沒有 <code>{page}</code></td><td>查詢字串</td><td><code>GET /posts?page=2</code> → <code>page = 2</code></td></tr>
+      <tr><td><code>Post post</code>（自訂類別）</td><td>請求內容的 JSON</td><td><code>{"title":"EF Core 入門"}</code> → <code>post.Title</code></td></tr>
+      <tr><td><code>BloggingContext db</code>（已註冊的服務）</td><td>DI 容器</td><td>第 12 節 <code>AddDbContext</code> 註冊後，直接當參數就拿得到</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3><span class="sub">17.4</span>怎麼回傳結果</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>回傳</th><th>HTTP 狀態碼</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td>直接回傳物件（如 <code>posts</code>）</td><td>200</td><td>自動轉成 JSON</td></tr>
+      <tr><td><code>Results.Ok(資料)</code></td><td>200</td><td>成功</td></tr>
+      <tr><td><code>Results.Created(網址, 資料)</code></td><td>201</td><td>新增成功</td></tr>
+      <tr><td><code>Results.NoContent()</code></td><td>204</td><td>成功但不回內容（例如刪除）</td></tr>
+      <tr><td><code>Results.BadRequest(訊息)</code></td><td>400</td><td>輸入有誤</td></tr>
+      <tr><td><code>Results.NotFound()</code></td><td>404</td><td>找不到</td></tr>
+      <tr><td><code>Results.Conflict(訊息)</code></td><td>409</td><td>衝突（例如網址重複）</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3><span class="sub">17.5</span>同一支 API，兩種寫法對照</h3>
+  <div class="compare">
+    <div>
+      <span class="tag accent">Minimal API（Program.cs）</span>
+<pre><code class="language-csharp">app.MapGet("/posts/{id}", async (int id, BloggingContext db) =&gt;
+{
+    var post = await db.Posts.FindAsync(id);
+    return post is null
+        ? Results.NotFound()
+        : Results.Ok(post);
+});</code></pre>
+    </div>
+    <div>
+      <span class="tag neutral">Controller（Controllers/PostsController.cs）</span>
+<pre><code class="language-csharp">[ApiController]
+[Route("posts")]
+public class PostsController : ControllerBase
+{
+    private readonly BloggingContext _db;
+    public PostsController(BloggingContext db) =&gt; _db = db;
+
+    [HttpGet("{id}")]
+    public async Task&lt;IActionResult&gt; Get(int id)
+    {
+        var post = await _db.Posts.FindAsync(id);
+        return post is null ? NotFound() : Ok(post);
+    }
+}</code></pre>
+    </div>
+  </div>
+  <p>對照著看：<code>MapGet("/posts/{id}")</code> ＝ <code>[Route("posts")]</code> + <code>[HttpGet("{id}")]</code>；Minimal API 把 DbContext 當參數，Controller 則從建構子注入。裡面用 EF Core 的部分完全一樣。</p>
+
+  <h3><span class="sub">17.6</span>怎麼測試</h3>
+  <ol>
+    <li>執行專案（Rider 按 Run，或 <code>dotnet run</code>）。</li>
+    <li>瀏覽器開 <code>https://localhost:&lt;port&gt;/swagger</code>，會列出所有 API。</li>
+    <li>點一支 API → <b>Try it out</b> → 填參數或 JSON → <b>Execute</b>，下方會顯示回應內容和狀態碼。</li>
+  </ol>
+
+  <div class="callout tip">
+    <strong>想系統性學 Minimal API</strong>
+    <p>微軟官方教學從零做一個待辦清單 API，約 30 分鐘：<a href="https://learn.microsoft.com/aspnet/core/tutorials/min-web-api">教學課程：使用 ASP.NET Core 建立最小 API</a>。完整功能說明見 <a href="https://learn.microsoft.com/aspnet/core/fundamentals/minimal-apis">Minimal API 概觀</a>。</p>
+  </div>
+</section>
+
 <section id="refs">
-  <h2><span class="num">17</span>參考資料</h2>
+  <h2><span class="num">18</span>參考資料</h2>
   <ul>
     <li><a href="https://learn.microsoft.com/ef/core/get-started/overview/first-app">EF Core 入門教學（Microsoft Learn）</a></li>
     <li><a href="https://learn.microsoft.com/ef/core/modeling/">建立模型（慣例、Data Annotations、Fluent API）</a></li>
@@ -1524,6 +1654,7 @@ sequenceDiagram
     <li><a href="https://learn.microsoft.com/ef/core/change-tracking/">變更追蹤</a></li>
     <li><a href="https://learn.microsoft.com/ef/core/managing-schemas/migrations/">Migrations 概觀</a></li>
     <li><a href="https://learn.microsoft.com/ef/core/cli/dotnet">dotnet ef 指令參考</a></li>
+    <li><a href="https://learn.microsoft.com/aspnet/core/fundamentals/minimal-apis">Minimal API 概觀</a></li>
     <li><a href="https://learn.microsoft.com/ef/core/performance/">效能指南（AsNoTracking、N+1 等）</a></li>
   </ul>
 </section>

@@ -33,6 +33,16 @@
 
 ## 1. 資料要存在哪裡？
 
+嘗試一：存在記憶體（Minimal API 寫法，寫在 `Program.cs`）：
+
+```csharp
+var posts = new List<Post>();                       // 記憶體裡的清單
+app.MapPost("/posts", (Post post) => { posts.Add(post); return Results.Ok(); });  // POST /posts：JSON 自動轉成 Post 加進清單
+app.MapGet("/posts", () => posts);                  // GET /posts：回傳清單（自動轉 JSON）
+```
+
+`app.MapXxx(網址, 函式)` ＝「有人呼叫這個網址時執行這個函式」。看不懂見文末「附錄：Minimal API」。程式一重啟清單就消失 → 不符合需求。
+
 | 需要的能力 | 記憶體變數（`List<Post>`） | JSON 檔案 | 關聯式資料庫 |
 |-----------|--------------------------|-----------|-------------|
 | 重啟後資料還在 | ✗ | ✓ | ✓ |
@@ -173,6 +183,8 @@ API Endpoint ──DI 注入──▶ DbContext (DbSet<Blog>, DbSet<Post>)
 | Provider | 翻成特定資料庫的 SQL | 資料庫種類 |
 | 連線字串 | 資料庫位置、登入方式 | 連線資訊 |
 | Migration | 比對 class 變化產生建表 / 改表程式碼 | Schema 版本 |
+
+**整張架構都是 ORM 嗎？不是。** ORM ＝ EF Core 核心 + Database Provider（EF Core 的外掛，負責特定資料庫的 SQL 寫法）。上面「你的程式」是使用 ORM 的一方；下面 ADO.NET 只是底層驅動，不認識 class，沒有 EF Core 也能單獨用。
 
 ## 6. class 如何對應資料表
 
@@ -438,6 +450,27 @@ Data Annotations（`[Required]`、`[MaxLength]`）寫在 class 上；Fluent API 
 | `A possible object cycle was detected` | API 回傳含導覽屬性的 Entity | 用 `Select` 投影成 DTO |
 | `Cannot insert duplicate key row ... with unique index` | 違反唯一索引 | 寫入前檢查並回 409 |
 | `Introducing FOREIGN KEY constraint ... may cause cycles or multiple cascade paths` | 多條串聯刪除路徑 | 其中一條 `.OnDelete(DeleteBehavior.NoAction)` |
+
+## 17. 附錄：Minimal API
+
+- .NET 6 起的寫法，API 直接寫在 `Program.cs`；另一種是 Controller（`[ApiController]` 類別 + `[HttpGet]`），底層相同
+- `MapGet` 讀、`MapPost` 新增、`MapPut` 修改、`MapDelete` 刪除
+
+| 參數 | 值從哪來 |
+|------|---------|
+| `int id` 且網址有 `{id}` | 路徑 `/posts/5` |
+| `int page` 網址沒有 | 查詢字串 `?page=2` |
+| `Post post`（類別） | 請求內容 JSON |
+| `BloggingContext db`（已註冊服務） | DI |
+
+| 回傳 | 狀態碼 |
+|------|-------|
+| 物件 / `Results.Ok()` | 200 |
+| `Results.Created()` | 201 |
+| `Results.NoContent()` | 204 |
+| `Results.BadRequest()` / `NotFound()` / `Conflict()` | 400 / 404 / 409 |
+
+測試：執行專案 → `/swagger` → Try it out → Execute。官方教學：[使用 ASP.NET Core 建立最小 API](https://learn.microsoft.com/aspnet/core/tutorials/min-web-api)
 
 ## 參考資料
 
