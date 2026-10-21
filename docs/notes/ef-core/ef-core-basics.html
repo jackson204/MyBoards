@@ -222,6 +222,53 @@
   .s-orm { position: relative; border: 3px solid var(--accent); border-radius: 14px; padding: 34px 10px 10px; }
   .s-orm-label { position: absolute; top: 8px; left: 12px; font-size: 13px; font-weight: 800; color: var(--accent); }
 
+  /* 全景圖（SVG） */
+  .diagram.rr { padding: 12px; }
+  .rr-svg { width: 100%; min-width: 680px; height: auto; display: block; }
+  .rr-svg text { fill: var(--fg); font-family: inherit; }
+  .rr-svg .t-h { font-size: 15px; font-weight: 700; }
+  .rr-svg .t-b { font-size: 14.5px; font-weight: 700; }
+  .rr-svg .t-xs { font-size: 11.5px; fill: var(--fg-muted); }
+  .rr-svg .t-code { font-size: 12px; font-family: "Cascadia Code", Consolas, monospace; fill: var(--fg-muted); }
+  .rr-svg .t-step { font-size: 12.5px; fill: var(--fg-muted); }
+  .rr-svg .t-num { font-size: 13px; font-weight: 800; fill: #fff; }
+  .rr-svg .t-btn { font-size: 12px; font-weight: 700; fill: #fff; }
+  .rr-svg .t-req { font-size: 14px; font-weight: 700; fill: var(--accent); }
+  .rr-svg .t-res { font-size: 14px; font-weight: 700; fill: var(--tip); }
+  .rr-svg .t-db  { font-size: 14px; font-weight: 700; fill: var(--l-prov-b); }
+  .rr-svg .s-card { fill: var(--bg-card); stroke: var(--border); stroke-width: 2; }
+  .rr-svg .s-bar { fill: var(--bg-soft); }
+  .rr-svg .s-field { fill: var(--bg-soft); stroke: var(--border); }
+  .rr-svg .f-btn { fill: var(--accent); }
+  .rr-svg .f-dot1 { fill: #ff5f57; } .rr-svg .f-dot2 { fill: #febc2e; } .rr-svg .f-dot3 { fill: #28c840; }
+  .rr-svg .s-server { fill: var(--bg-soft); stroke: var(--fg-muted); stroke-width: 2; stroke-dasharray: 6 4; }
+  .rr-svg .s-app { fill: var(--l-app); stroke: var(--l-app-b); stroke-width: 2; }
+  .rr-svg .s-ef  { fill: var(--l-orm); stroke: var(--l-orm-b); stroke-width: 2; }
+  .rr-svg .s-ado { fill: var(--l-ado); stroke: var(--l-ado-b); stroke-width: 2; }
+  .rr-svg .s-db { fill: var(--l-db); stroke: var(--l-db-b); stroke-width: 2; }
+  .rr-svg .s-db-top { fill: var(--l-db); stroke: var(--l-db-b); stroke-width: 2; filter: brightness(.95); }
+  .rr-svg .l-req, .rr-svg .l-res, .rr-svg .l-db, .rr-svg .l-in { fill: none; stroke-width: 3; }
+  .rr-svg .l-req { stroke: var(--accent); }
+  .rr-svg .l-res { stroke: var(--tip); }
+  .rr-svg .l-db  { stroke: var(--l-prov-b); }
+  .rr-svg .l-in  { stroke: var(--fg-muted); stroke-width: 2; }
+  .rr-svg .f-req, .rr-svg .c-req { fill: var(--accent); }
+  .rr-svg .f-res, .rr-svg .c-res { fill: var(--tip); }
+  .rr-svg .f-db,  .rr-svg .c-db  { fill: var(--l-prov-b); }
+  .rr-svg .f-muted { fill: var(--fg-muted); }
+  @media (prefers-color-scheme: dark) { .rr-svg .t-num, .rr-svg .t-btn { fill: #0d1117; } }
+  .stepno { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-weight: 800; font-size: 13px; color: #fff; background: var(--fg-muted); }
+  .stepno.req { background: var(--accent); } .stepno.res { background: var(--tip); } .stepno.db { background: var(--l-prov-b); }
+  @media (prefers-color-scheme: dark) { .stepno { color: #0d1117; } }
+
+  /* HTTP 訊息 */
+  .tag.ok { background: var(--tip-soft); color: var(--tip); }
+  pre.http-msg code { font-size: 13.5px; }
+  .hl-line { color: var(--accent); font-weight: 700; }
+  .hl-head { color: var(--fg-muted); }
+  .hl-body { color: var(--l-prov-b); }
+  .legend { font-weight: 700; white-space: nowrap; }
+
   footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--fg-muted); }
 
   @media (max-width: 900px) {
@@ -271,7 +318,7 @@
     <li><a href="#config">14　慣例與 Fluent API</a></li>
     <li><a href="#migration-cmd">15　Migration 指令</a></li>
     <li><a href="#errors">16　常見錯誤</a></li>
-    <li><a href="#minimal-api">17　附錄：Minimal API</a></li>
+    <li><a href="#minimal-api">17　附錄：HTTP 與 Minimal API</a></li>
     <li><a href="#refs">18　參考資料</a></li>
   </ol>
 </details>
@@ -302,7 +349,112 @@
     明天主管會打開網站發一篇文章，<b>後天再打開，那篇文章必須還在。</b></p>
   </div>
 
-  <p>「發一篇文章」看起來很簡單：前端送來標題和內容，後端收下來就好。但「後天還要在」這句話會引出一連串問題，每解決一個就會冒出下一個。這份文件就照這個順序往下推：</p>
+  <p>先看全景：主管按下「送出」後，這篇文章會經過哪些地方？</p>
+  <figure>
+    <div class="diagram rr">
+<svg class="rr-svg" viewBox="0 0 1000 420" role="img" aria-label="發一篇文章時，資料從前端到資料庫再回來的完整路徑">
+  <defs>
+    <marker id="ah-req" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="f-req" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ah-res" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="f-res" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ah-db" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="f-db" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ah-in" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-muted" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+
+  <!-- 前端：瀏覽器視窗 -->
+  <g>
+    <rect class="s-card" x="20" y="70" width="230" height="190" rx="10"/>
+    <rect class="s-bar" x="20" y="70" width="230" height="30" rx="10"/>
+    <rect class="s-bar" x="20" y="88" width="230" height="12"/>
+    <circle class="f-dot1" cx="38" cy="85" r="5"/><circle class="f-dot2" cx="54" cy="85" r="5"/><circle class="f-dot3" cx="70" cy="85" r="5"/>
+    <rect class="s-field" x="84" y="77" width="150" height="16" rx="8"/>
+    <text class="t-xs" x="94" y="89">myblog.com/new</text>
+    <text class="t-b" x="40" y="128">發表新文章</text>
+    <text class="t-xs" x="40" y="150">標題</text>
+    <rect class="s-field" x="40" y="156" width="190" height="20" rx="4"/>
+    <text class="t-xs" x="48" y="170">EF Core 入門</text>
+    <text class="t-xs" x="40" y="194">內容</text>
+    <rect class="s-field" x="40" y="200" width="190" height="26" rx="4"/>
+    <rect class="f-btn" x="160" y="232" width="70" height="20" rx="5"/>
+    <text class="t-btn" x="195" y="246" text-anchor="middle">送出</text>
+    <text class="t-h" x="135" y="292" text-anchor="middle">前端（瀏覽器 / App）</text>
+  </g>
+
+  <!-- 後端：ASP.NET Core -->
+  <g>
+    <rect class="s-server" x="400" y="40" width="300" height="330" rx="14"/>
+    <text class="t-h" x="550" y="68" text-anchor="middle">後端：ASP.NET Core 程式</text>
+    <rect class="s-app" x="425" y="85" width="250" height="62" rx="9"/>
+    <text class="t-b" x="550" y="110" text-anchor="middle">Minimal API</text>
+    <text class="t-code" x="550" y="132" text-anchor="middle">app.MapPost("/posts", …)</text>
+    <rect class="s-ef" x="425" y="180" width="250" height="62" rx="9"/>
+    <text class="t-b" x="550" y="205" text-anchor="middle">EF Core（ORM）</text>
+    <text class="t-code" x="550" y="227" text-anchor="middle">db.Posts.Add(post); SaveChanges()</text>
+    <rect class="s-ado" x="425" y="275" width="250" height="62" rx="9"/>
+    <text class="t-b" x="550" y="300" text-anchor="middle">ADO.NET</text>
+    <text class="t-code" x="550" y="322" text-anchor="middle">Microsoft.Data.SqlClient</text>
+    <path class="l-in" d="M550,147 V178" marker-end="url(#ah-in)"/>
+    <path class="l-in" d="M550,242 V273" marker-end="url(#ah-in)"/>
+    <text class="t-step" x="560" y="167">② JSON → Post 物件</text>
+    <text class="t-step" x="560" y="262">② LINQ / 變更 → SQL</text>
+  </g>
+
+  <!-- 資料庫 -->
+  <g>
+    <path class="s-db" d="M850,250 v80 a65,18 0 0 0 130,0 v-80"/>
+    <ellipse class="s-db" cx="915" cy="250" rx="65" ry="18"/>
+    <ellipse class="s-db-top" cx="915" cy="250" rx="65" ry="18"/>
+    <text class="t-b" x="915" y="305" text-anchor="middle">SQL Server</text>
+    <text class="t-xs" x="915" y="325" text-anchor="middle">Posts 資料表</text>
+    <text class="t-h" x="915" y="385" text-anchor="middle">資料庫</text>
+  </g>
+
+  <!-- ① Request -->
+  <path class="l-req" d="M255,120 H395" marker-end="url(#ah-req)"/>
+  <circle class="c-req" cx="325" cy="96" r="12"/><text class="t-num" x="325" y="101" text-anchor="middle">1</text>
+  <text class="t-req" x="325" y="146" text-anchor="middle">HTTP Request</text>
+  <text class="t-code" x="325" y="164" text-anchor="middle">POST /posts</text>
+  <text class="t-code" x="325" y="180" text-anchor="middle">{ "title": … }</text>
+
+  <!-- ⑤ Response -->
+  <path class="l-res" d="M395,235 H255" marker-end="url(#ah-res)"/>
+  <circle class="c-res" cx="325" cy="211" r="12"/><text class="t-num" x="325" y="216" text-anchor="middle">5</text>
+  <text class="t-res" x="325" y="261" text-anchor="middle">HTTP Response</text>
+  <text class="t-code" x="325" y="279" text-anchor="middle">201 Created</text>
+  <text class="t-code" x="325" y="295" text-anchor="middle">{ "postId": 1 }</text>
+
+  <!-- ③ SQL -->
+  <path class="l-db" d="M705,290 H845" marker-end="url(#ah-db)"/>
+  <circle class="c-db" cx="775" cy="268" r="12"/><text class="t-num" x="775" y="273" text-anchor="middle">3</text>
+  <text class="t-db" x="775" y="244" text-anchor="middle">SQL 文字</text>
+  <text class="t-code" x="775" y="226" text-anchor="middle">INSERT INTO Posts</text>
+
+  <!-- ④ Result -->
+  <path class="l-db" d="M845,340 H705" marker-end="url(#ah-db)"/>
+  <circle class="c-db" cx="775" cy="318" r="12"/><text class="t-num" x="775" y="323" text-anchor="middle">4</text>
+  <text class="t-db" x="775" y="364" text-anchor="middle">結果</text>
+  <text class="t-code" x="775" y="380" text-anchor="middle">影響 1 列</text>
+  <text class="t-code" x="775" y="396" text-anchor="middle">新 PostId = 1</text>
+
+  <!-- ⑤ 前的回程說明 -->
+  <text class="t-step" x="550" y="395" text-anchor="middle">回程：EF Core 取回新 PostId → API 包成 Response</text>
+</svg>
+    </div>
+    <figcaption>圖 0-1　全景：按下「送出」後，一篇文章從前端到資料庫、再把結果送回前端的完整來回</figcaption>
+  </figure>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>步驟</th><th>發生什麼</th><th>本文哪裡講</th></tr></thead>
+    <tbody>
+      <tr><td><span class="stepno req">1</span></td><td>前端送出 <b>HTTP Request</b>：方法 <code>POST</code>、網址 <code>/posts</code>，內容是文章的 JSON</td><td><a href="#minimal-api">附錄 17</a></td></tr>
+      <tr><td><span class="stepno">2</span></td><td>後端的 Minimal API 收到請求，把 JSON 轉成 <code>Post</code> 物件，交給 EF Core；EF Core 把「新增這個物件」翻成 SQL</td><td><a href="#why-class">第 3</a>–<a href="#save">8 節</a>、<a href="#minimal-api">附錄 17</a></td></tr>
+      <tr><td><span class="stepno db">3</span></td><td>EF Core 透過 ADO.NET 把 <b>SQL 文字</b>送到資料庫</td><td><a href="#connection">第 2 節</a>、<a href="#save">第 8 節</a></td></tr>
+      <tr><td><span class="stepno db">4</span></td><td>資料庫執行，<b>把文章存下來</b>，回傳結果（影響 1 列、新文章的編號）</td><td><a href="#where">第 1</a>、<a href="#connection">2 節</a></td></tr>
+      <tr><td><span class="stepno res">5</span></td><td>後端把結果包成 <b>HTTP Response</b> 回給前端：狀態碼 <code>201 Created</code> + JSON</td><td><a href="#minimal-api">附錄 17</a></td></tr>
+    </tbody>
+  </table></div>
+  <p>後天主管再打開網站時，前端送出 <code>GET /posts</code>，走的是同一條路：後端透過 EF Core 送 <code>SELECT</code>，資料庫把存著的文章拿回來，再包成 Response 回給前端。<b>這份文件要搞懂的，就是圖中後端和資料庫之間（② ③ ④）發生的事。</b></p>
+
+  <p>看起來很簡單，但「後天還要在」這句話會引出一連串問題，每解決一個就會冒出下一個。這份文件就照這個順序往下推：</p>
 
   <figure>
     <div class="diagram"><script type="text/x-mermaid">
@@ -315,7 +467,7 @@ flowchart TB
     Q5["❺ ORM（EF Core）內部怎麼運作？"] -- "理解後動手" --> Q6
     Q6(["❻ 實際做一次：需求 → 分析 → 實作 → 驗收"])
     </script></div>
-    <figcaption>圖 0-1　本文的推理路線：每一步都是為了解決上一步留下的問題</figcaption>
+    <figcaption>圖 0-2　本文的推理路線：每一步都是為了解決上一步留下的問題</figcaption>
   </figure>
 </section>
 
@@ -344,7 +496,7 @@ app.MapGet("/posts", () =&gt; posts);             // ③ 收到 GET /posts 時�
   </table></div>
   <div class="callout">
     <strong>對 Minimal API 不熟？</strong>
-    <p>只要先抓住一句話：<b><code>app.MapXxx(網址, 函式)</code> ＝「有人呼叫這個網址時，執行這個函式」</b>，Xxx 是 HTTP 方法（Get 讀、Post 新增、Put 修改、Delete 刪除）。本文所有 API 範例都是這個寫法，重點在函式裡面怎麼用 EF Core。更多說明（參數從哪來、怎麼回傳、跟 Controller 寫法對照、怎麼測試）見<a href="#minimal-api">附錄：Minimal API 快速入門</a>。</p>
+    <p>只要先抓住一句話：<b><code>app.MapXxx(網址, 函式)</code> ＝「有人呼叫這個網址時，執行這個函式」</b>，Xxx 是 HTTP 方法（Get 讀、Post 新增、Put 修改、Delete 刪除）。本文所有 API 範例都是這個寫法，重點在函式裡面怎麼用 EF Core。更多說明（參數從哪來、怎麼回傳、跟 Controller 寫法對照、怎麼測試）見<a href="#minimal-api">附錄：HTTP 與 Minimal API 快速入門</a>。</p>
   </div>
   <p>這樣可以運作，但 <code>posts</code> 存在<b>記憶體</b>裡。程式一重啟（重新部署、伺服器重開機、當機），文章就全部消失。不符合「後天還要在」。</p>
 
@@ -1314,7 +1466,7 @@ dotnet ef database update</code></pre>
 
     <li>
       <h3>實作 API（分析 ④）</h3>
-      <p>以下用 Minimal API 撰寫，看不懂寫法時請先讀<a href="#minimal-api">附錄：Minimal API 快速入門</a>。</p>
+      <p>以下用 Minimal API 撰寫，看不懂寫法時請先讀<a href="#minimal-api">附錄：HTTP 與 Minimal API 快速入門</a>。</p>
       <span class="file">Program.cs（接在 <code>var app = builder.Build();</code> 之後）</span>
 <pre><code class="language-csharp">// R1 建立部落格，網址不可重複
 app.MapPost("/blogs", async (BloggingContext db, CreateBlogRequest req) =&gt;
@@ -1552,10 +1704,57 @@ sequenceDiagram
 </section>
 
 <section id="minimal-api">
-  <h2><span class="num">17</span>附錄：Minimal API 快速入門</h2>
-  <p class="lead">本文的 API 都用 Minimal API 撰寫。這裡只講看懂範例需要的部分。</p>
+  <h2><span class="num">17</span>附錄：HTTP 與 Minimal API 快速入門</h2>
+  <p class="lead">前端和後端怎麼溝通（HTTP Request / Response），以及本文的 API 寫法 Minimal API。這裡只講看懂範例需要的部分。</p>
 
-  <h3><span class="sub">17.1</span>什麼是 Minimal API</h3>
+  <h3><span class="sub">17.1</span>一次 HTTP 請求長什麼樣子</h3>
+  <p>圖 0-1 的 ① 和 ⑤，實際上是兩段<b>純文字訊息</b>。前端送出 Request，後端回傳 Response：</p>
+  <div class="compare http">
+    <div>
+      <span class="tag accent">① HTTP Request（前端 → 後端）</span>
+<pre class="http-msg"><code class="nohighlight"><span class="hl-line">POST /posts HTTP/1.1</span>
+<span class="hl-head">Host: localhost:5001
+Content-Type: application/json</span>
+
+<span class="hl-body">{
+  "title": "EF Core 入門",
+  "content": "今天來介紹…",
+  "blogId": 1
+}</span></code></pre>
+    </div>
+    <div>
+      <span class="tag ok">⑤ HTTP Response（後端 → 前端）</span>
+<pre class="http-msg"><code class="nohighlight"><span class="hl-line">HTTP/1.1 201 Created</span>
+<span class="hl-head">Location: /posts/1
+Content-Type: application/json</span>
+
+<span class="hl-body">{
+  "postId": 1
+}</span></code></pre>
+    </div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>部分</th><th>Request 裡是什麼</th><th>Response 裡是什麼</th><th>在 Minimal API 對應到</th></tr></thead>
+    <tbody>
+      <tr><td><span class="legend hl-line">第一行</span></td><td><b>方法</b> + <b>網址</b>：<code>POST /posts</code></td><td><b>狀態碼</b>：<code>201 Created</code></td><td><code>app.MapPost("/posts", …)</code> 決定誰接這個請求；<code>Results.Created(…)</code> 決定狀態碼</td></tr>
+      <tr><td><span class="legend hl-head">標頭 Header</span></td><td>附加資訊，例如內容是 JSON</td><td>附加資訊，例如新資源的網址 <code>Location</code></td><td>框架自動處理，通常不用管</td></tr>
+      <tr><td><span class="legend hl-body">內容 Body</span></td><td>要新增的資料（JSON）</td><td>回傳的資料（JSON）</td><td>Request Body → 參數 <code>(Post post)</code>；回傳的物件 → Response Body</td></tr>
+    </tbody>
+  </table></div>
+  <p>對照程式碼：</p>
+<pre><code class="language-csharp">app.MapPost("/posts", async (Post post, BloggingContext db) =&gt;   // POST /posts；Body → post
+{
+    db.Posts.Add(post);
+    await db.SaveChangesAsync();                                  // 圖 0-1 的 ② ③ ④
+    return Results.Created($"/posts/{post.PostId}",               // 狀態碼 201 + Location 標頭
+                           new { post.PostId });                  // Response Body
+});</code></pre>
+  <div class="callout">
+    <strong>方法代表「想做什麼」</strong>
+    <p><code>GET</code> 讀取、<code>POST</code> 新增、<code>PUT</code> 修改、<code>DELETE</code> 刪除。狀態碼的第一個數字代表結果：<b>2xx 成功</b>、<b>4xx 前端送錯</b>（400 格式錯、404 找不到、409 衝突）、<b>5xx 後端出錯</b>（500）。</p>
+  </div>
+
+  <h3><span class="sub">17.2</span>什麼是 Minimal API</h3>
   <p>ASP.NET Core 寫 Web API 有兩種風格：</p>
   <div class="table-wrap"><table>
     <thead><tr><th></th><th>Minimal API</th><th>Controller</th></tr></thead>
@@ -1568,13 +1767,13 @@ sequenceDiagram
   </table></div>
   <p>兩者底層相同，能力也幾乎一樣，只是寫法不同。學會一種，另一種很快就看得懂。</p>
 
-  <h3><span class="sub">17.2</span>基本結構：網址 + 函式</h3>
+  <h3><span class="sub">17.3</span>基本結構：網址 + 函式</h3>
 <pre><code class="language-csharp">app.MapGet("/posts", () =&gt; ...);           // 讀取
 app.MapPost("/posts", (Post post) =&gt; ...); // 新增
 app.MapPut("/posts/{id}", ...);            // 修改
 app.MapDelete("/posts/{id}", ...);         // 刪除</code></pre>
 
-  <h3><span class="sub">17.3</span>函式的參數從哪來？</h3>
+  <h3><span class="sub">17.4</span>函式的參數從哪來？</h3>
   <p>ASP.NET Core 會依參數的型別和名稱，自動從請求中找到對應的值傳進來（稱為 <b>Model Binding</b>）：</p>
   <div class="table-wrap"><table>
     <thead><tr><th>參數長這樣</th><th>值從哪來</th><th>例子</th></tr></thead>
@@ -1586,7 +1785,7 @@ app.MapDelete("/posts/{id}", ...);         // 刪除</code></pre>
     </tbody>
   </table></div>
 
-  <h3><span class="sub">17.4</span>怎麼回傳結果</h3>
+  <h3><span class="sub">17.5</span>怎麼回傳結果</h3>
   <div class="table-wrap"><table>
     <thead><tr><th>回傳</th><th>HTTP 狀態碼</th><th>用途</th></tr></thead>
     <tbody>
@@ -1600,7 +1799,7 @@ app.MapDelete("/posts/{id}", ...);         // 刪除</code></pre>
     </tbody>
   </table></div>
 
-  <h3><span class="sub">17.5</span>同一支 API，兩種寫法對照</h3>
+  <h3><span class="sub">17.6</span>同一支 API，兩種寫法對照</h3>
   <div class="compare">
     <div>
       <span class="tag accent">Minimal API（Program.cs）</span>
@@ -1632,7 +1831,7 @@ public class PostsController : ControllerBase
   </div>
   <p>對照著看：<code>MapGet("/posts/{id}")</code> ＝ <code>[Route("posts")]</code> + <code>[HttpGet("{id}")]</code>；Minimal API 把 DbContext 當參數，Controller 則從建構子注入。裡面用 EF Core 的部分完全一樣。</p>
 
-  <h3><span class="sub">17.6</span>怎麼測試</h3>
+  <h3><span class="sub">17.7</span>怎麼測試</h3>
   <ol>
     <li>執行專案（Rider 按 Run，或 <code>dotnet run</code>）。</li>
     <li>瀏覽器開 <code>https://localhost:&lt;port&gt;/swagger</code>，會列出所有 API。</li>

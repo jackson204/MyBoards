@@ -18,6 +18,20 @@
 
 ## 0. 故事的開始
 
+**全景：按下「送出」後，一篇文章走的路**
+
+```
+[前端] ──① HTTP Request：POST /posts + JSON──▶ [後端 ASP.NET Core]
+                                                  Minimal API → ② JSON 轉 Post 物件
+                                                  EF Core     → ② 物件變更轉成 SQL
+                                                  ADO.NET ──③ SQL 文字（INSERT）──▶ [SQL Server]
+                                                          ◀──④ 結果（影響 1 列）────
+[前端] ◀──⑤ HTTP Response：201 Created + JSON──
+```
+
+本文要搞懂的是後端與資料庫之間（②③④）；①⑤ 見附錄 17。
+
+
 任務：做一個**部落格平台後端 API**（開部落格、發文章、加標籤）。條件：**今天發的文章，後天還要在。**
 這句話引出一連串問題，本文照這個順序推理：
 
@@ -451,7 +465,24 @@ Data Annotations（`[Required]`、`[MaxLength]`）寫在 class 上；Fluent API 
 | `Cannot insert duplicate key row ... with unique index` | 違反唯一索引 | 寫入前檢查並回 409 |
 | `Introducing FOREIGN KEY constraint ... may cause cycles or multiple cascade paths` | 多條串聯刪除路徑 | 其中一條 `.OnDelete(DeleteBehavior.NoAction)` |
 
-## 17. 附錄：Minimal API
+## 17. 附錄：HTTP 與 Minimal API
+
+**HTTP Request / Response 是兩段純文字：**
+
+```
+POST /posts HTTP/1.1                 ← 第一行：方法 + 網址   → app.MapPost("/posts", …)
+Content-Type: application/json       ← Header：附加資訊
+                                      
+{ "title": "EF Core 入門", ... }     ← Body：資料           → 參數 (Post post)
+
+HTTP/1.1 201 Created                 ← 第一行：狀態碼        → Results.Created(…)
+Location: /posts/1                   ← Header
+                                      
+{ "postId": 1 }                      ← Body                 → 回傳的物件
+```
+
+狀態碼：2xx 成功、4xx 前端送錯（400 / 404 / 409）、5xx 後端出錯（500）。
+
 
 - .NET 6 起的寫法，API 直接寫在 `Program.cs`；另一種是 Controller（`[ApiController]` 類別 + `[HttpGet]`），底層相同
 - `MapGet` 讀、`MapPost` 新增、`MapPut` 修改、`MapDelete` 刪除
